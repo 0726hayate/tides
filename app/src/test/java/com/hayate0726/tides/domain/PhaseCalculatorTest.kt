@@ -5,9 +5,8 @@ import com.hayate0726.tides.domain.model.Cycle
 import com.hayate0726.tides.domain.model.Goal
 import com.hayate0726.tides.domain.model.Phase
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -111,7 +110,7 @@ class PhaseCalculatorTest {
     }
 
     @Test
-    fun `ovulation window is a contiguous 3-day span`() {
+    fun `ovulation window is a contiguous 5-day span`() {
         val cycles = listOf(
             cycle("2026-04-01", "2026-04-04", "2026-04-29"),
             cycle("2026-04-29", "2026-05-02", null),
@@ -123,7 +122,38 @@ class PhaseCalculatorTest {
             goals = ovulationGoals,
         )!!
         val window = result.ovulationWindow
-        assertEquals(2L, ChronoUnit.DAYS.between(window.start, window.endInclusive))
+        assertEquals(4L, ChronoUnit.DAYS.between(window.start, window.end))
+    }
+
+    @Test
+    fun `phase is suppressed when median cycle length is outside 21-35 days`() {
+        val cycles = listOf(
+            cycle("2026-01-01", "2026-01-05", "2026-02-10"),  // 40-day cycle
+            cycle("2026-02-10", "2026-02-14", null),
+        )
+        val result = PhaseCalculator.compute(
+            cycles = cycles,
+            today = LocalDate.parse("2026-03-01"),
+            birthControl = nonHormonal,
+            goals = ovulationGoals,
+        )
+        assertNull(result)
+    }
+
+    @Test
+    fun `requires cycles sorted ascending by start`() {
+        val unsorted = listOf(
+            cycle("2026-04-29", "2026-05-02", null),
+            cycle("2026-04-01", "2026-04-04", "2026-04-29"),
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            PhaseCalculator.compute(
+                cycles = unsorted,
+                today = LocalDate.parse("2026-05-12"),
+                birthControl = nonHormonal,
+                goals = ovulationGoals,
+            )
+        }
     }
 
     @Test

@@ -2,14 +2,14 @@ package com.hayate0726.tides.domain
 
 import com.hayate0726.tides.domain.model.Cycle
 import com.hayate0726.tides.domain.model.FlowIntensity
-import com.hayate0726.tides.domain.model.Symptom
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 
 class FigoAnalysisTest {
+
+    private val today = LocalDate.parse("2026-06-01")
 
     private fun cycle(start: String, periodEnd: String, nextStart: String?) =
         Cycle(LocalDate.parse(start), LocalDate.parse(periodEnd), nextStart?.let { LocalDate.parse(it) })
@@ -26,6 +26,7 @@ class FigoAnalysisTest {
             cycleFlowEntries = emptyList(),
             painEntries = emptyList(),
             intermenstrualBleedingDates = emptyList(),
+            today = today,
         )
         assertTrue(patterns.isEmpty(), "expected no patterns, got $patterns")
     }
@@ -36,7 +37,7 @@ class FigoAnalysisTest {
             cycle("2026-01-01", "2026-01-05", "2026-01-22"),  // 21
             cycle("2026-01-22", "2026-01-26", "2026-02-12"),  // 21
         )
-        val patterns = FigoAnalysis.analyze(cycles, emptyList(), emptyList(), emptyList())
+        val patterns = FigoAnalysis.analyze(cycles, emptyList(), emptyList(), emptyList(), today = today)
         assertTrue(patterns.contains(FigoAnalysis.Pattern.CYCLE_FREQUENT))
     }
 
@@ -46,7 +47,7 @@ class FigoAnalysisTest {
             cycle("2026-01-01", "2026-01-05", "2026-02-15"),  // 45
             cycle("2026-02-15", "2026-02-19", "2026-04-01"),  // 45
         )
-        val patterns = FigoAnalysis.analyze(cycles, emptyList(), emptyList(), emptyList())
+        val patterns = FigoAnalysis.analyze(cycles, emptyList(), emptyList(), emptyList(), today = today)
         assertTrue(patterns.contains(FigoAnalysis.Pattern.CYCLE_INFREQUENT))
     }
 
@@ -56,7 +57,7 @@ class FigoAnalysisTest {
             cycle("2026-01-01", "2026-01-05", "2026-01-23"),  // 22
             cycle("2026-01-23", "2026-01-27", "2026-02-23"),  // 31
         )
-        val patterns = FigoAnalysis.analyze(cycles, emptyList(), emptyList(), emptyList())
+        val patterns = FigoAnalysis.analyze(cycles, emptyList(), emptyList(), emptyList(), today = today)
         assertTrue(patterns.contains(FigoAnalysis.Pattern.CYCLE_IRREGULAR))
     }
 
@@ -65,7 +66,7 @@ class FigoAnalysisTest {
         val cycles = listOf(
             cycle("2026-01-01", "2026-01-10", "2026-01-29"),  // 9-day period
         )
-        val patterns = FigoAnalysis.analyze(cycles, emptyList(), emptyList(), emptyList())
+        val patterns = FigoAnalysis.analyze(cycles, emptyList(), emptyList(), emptyList(), today = today)
         assertTrue(patterns.contains(FigoAnalysis.Pattern.PERIOD_PROLONGED))
     }
 
@@ -79,6 +80,7 @@ class FigoAnalysisTest {
             emptyList(),
             emptyList(),
             listOf(LocalDate.parse("2026-01-15")),
+            today = today,
         )
         assertTrue(patterns.contains(FigoAnalysis.Pattern.INTERMENSTRUAL_BLEEDING))
     }
@@ -95,6 +97,7 @@ class FigoAnalysisTest {
                 FigoAnalysis.PainEntry(LocalDate.parse("2026-01-01"), 8),
             ),
             intermenstrualBleedingDates = emptyList(),
+            today = today,
         )
         assertTrue(patterns.contains(FigoAnalysis.Pattern.SEVERE_DYSMENORRHEA))
     }
@@ -113,6 +116,7 @@ class FigoAnalysisTest {
             ),
             painEntries = emptyList(),
             intermenstrualBleedingDates = emptyList(),
+            today = today,
         )
         assertTrue(patterns.contains(FigoAnalysis.Pattern.HEAVY_FLOW))
     }

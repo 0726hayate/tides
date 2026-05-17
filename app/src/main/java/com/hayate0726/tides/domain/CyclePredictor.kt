@@ -18,6 +18,9 @@ import java.time.LocalDate
 object CyclePredictor {
 
     fun predictNextPeriod(cycles: List<Cycle>): PredictionRange? {
+        require(cycles.zipWithNext().all { (a, b) -> !b.start.isBefore(a.start) }) {
+            "cycles must be sorted ascending by start"
+        }
         val completed = cycles.filter { !it.isActive }.mapNotNull { c -> c.length?.let { c to it } }
         if (completed.size < 2) return null
 

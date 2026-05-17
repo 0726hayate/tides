@@ -12,7 +12,8 @@ data class CycleStats(
     val medianCycleLength: Int?,
     val cycleLengthMin: Int?,
     val cycleLengthMax: Int?,
-    val cycleLengthVariance: Int?, // max - min
+    /** Spread = max - min cycle length, in days. Not statistical variance. */
+    val cycleLengthRange: Int?,
     val medianPeriodLength: Int?,
     val regularity: Regularity?,
     val periodLengthTrend: Trend,
@@ -25,6 +26,9 @@ data class CycleStats(
     companion object {
 
         fun compute(cycles: List<Cycle>): CycleStats {
+            require(cycles.zipWithNext().all { (a, b) -> !b.start.isBefore(a.start) }) {
+                "cycles must be sorted ascending by start"
+            }
             val completed = cycles.filter { !it.isActive }
             val active = cycles.firstOrNull { it.isActive }
 
@@ -48,7 +52,7 @@ data class CycleStats(
                 medianCycleLength = medianCycle,
                 cycleLengthMin = minCycle,
                 cycleLengthMax = maxCycle,
-                cycleLengthVariance = variance,
+                cycleLengthRange = variance,
                 medianPeriodLength = periodLens.medianOrNull(),
                 regularity = regularity,
                 periodLengthTrend = trendOf(periodLens),

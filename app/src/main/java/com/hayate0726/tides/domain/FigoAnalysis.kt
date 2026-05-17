@@ -44,8 +44,11 @@ object FigoAnalysis {
         cycleFlowEntries: List<FlowEntry>,
         painEntries: List<PainEntry>,
         intermenstrualBleedingDates: List<LocalDate>,
-        today: LocalDate = LocalDate.now(),
+        today: LocalDate,
     ): Set<Pattern> {
+        require(cycles.zipWithNext().all { (a, b) -> !b.start.isBefore(a.start) }) {
+            "cycles must be sorted ascending by start"
+        }
         val found = mutableSetOf<Pattern>()
         val completed = cycles.filter { !it.isActive }
         val lengths = completed.mapNotNull { it.length }

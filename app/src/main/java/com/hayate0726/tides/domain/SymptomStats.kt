@@ -29,6 +29,9 @@ data class SymptomStats(
     companion object {
 
         fun compute(entries: List<Entry>, cycles: List<Cycle>): SymptomStats {
+            require(cycles.zipWithNext().all { (a, b) -> !b.start.isBefore(a.start) }) {
+                "cycles must be sorted ascending by start"
+            }
             val freq = mutableMapOf<Symptom, Int>()
             for (e in entries) {
                 if (e.symptom.isFreeText) continue
