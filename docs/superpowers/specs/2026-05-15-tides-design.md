@@ -1,9 +1,12 @@
 # Tides — Offline Period Tracker Design Spec
 
-**Status:** Draft for user review
+**Status:** Draft for user review — v1.1
 **Date:** 2026-05-15
 **Author:** hayate0726
 **Working name:** Tides (ambiguous on home screen — does not out the user)
+**Revision history:**
+- v1.0 (2026-05-15) — initial spec
+- v1.1 (2026-05-15) — pre-mortem revisions: threat-model presets, calendar view toggles, curated symptom taxonomy, FIGO-aligned doctor PDF, one-tap share, monthly insights card, notifications design, F-Droid + Obtainium distribution commitment
 
 ---
 
@@ -86,12 +89,25 @@ com.hayate0726.tides/
 
 - **Database:** Room (SQLite) with SQLCipher for transparent full-database encryption.
 - **Schema (entities):**
-  - `cycle_entries` — `date`, `flow_intensity` (0=none, 1=spotting, 2=light, 3=medium, 4=heavy), `notes` (nullable)
-  - `symptom_entries` — `date`, `symptom_type` (enum + custom string), `severity` (0–2: mild/moderate/severe)
+  - `cycle_entries` — `date`, `flow_intensity` (0=none, 1=spotting, 2=light, 3=medium, 4=heavy), `pain_severity` (0–10 NRS, nullable; surfaces in doctor PDF as dysmenorrhea severity), `notes` (nullable)
+  - `symptom_entries` — `date`, `symptom_type` (enum from curated taxonomy below; `OTHER` for user-entered free text), `severity` (0–2: mild/moderate/severe), `other_text` (nullable, only populated when `symptom_type == OTHER`)
   - `birth_control` — `method` (none/pill/hormonal-iud/copper-iud/implant/patch/ring/other), `start_date`, `end_date` (nullable, for tracking method changes over time)
-  - `settings` — key/value: `theme`, `accent_color`, `week_start`, `duress_mode` (off/decoy/wipe), `show_phases`, `bc_method`, etc.
-  - `custom_symptoms` — user-defined symptom types
+  - `settings` — key/value: `theme`, `accent_color`, `week_start`, `threat_preset` (just_for_me/locked_when_away/always_locked), `duress_mode` (off/decoy/wipe), `show_phases`, `bc_method`, `calendar_view` (all/period_only/phases/symptoms), etc.
   - `goals` — onboarding goal selections (drives which features appear)
+
+**Curated symptom taxonomy.** Symptoms ship as a fixed enum so the data is analyzable across cycles. Categories (each symptom is a discrete enum value, severity is 0–2):
+
+- **Pain:** cramps, headache, migraine, back pain, breast tenderness, joint pain, abdominal pain
+- **Mood:** anxious, irritable, sad, happy, sensitive, calm
+- **Energy:** tired, energetic, restless, foggy
+- **Body:** bloating, acne, hot flashes, chills, dizziness, nausea, vomiting
+- **Digestive:** constipation, diarrhea, gas, increased appetite, decreased appetite, cravings
+- **Sleep:** insomnia, oversleeping, vivid dreams, night sweats
+- **Discharge:** dry, sticky, creamy, watery, egg-white, brown, spotting
+- **Sex:** high libido, low libido, painful sex
+- **Other (note):** free-text escape hatch. Stored but excluded from frequency stats and from the doctor-PDF "Patterns of note" section. Surfaces as a list of notes in the doctor PDF appendix only.
+
+Custom user-defined symptoms are **not supported** as enum values. The "Other (note)" symptom keeps power users from feeling boxed out while keeping aggregate analytics clean.
 
 ### Encryption key flow
 
@@ -183,13 +199,18 @@ A second PIN hash is stored alongside the primary. On every unlock attempt, both
 
 ### 5.1 First-launch onboarding
 
-Five steps, each on its own screen. Step 1 is fixed; steps 2–5 are partly conditional on step 2 answers.
+Six steps, each on its own screen. Step 1 is fixed; subsequent steps are partly conditional on step 2 answers.
 
 1. **Welcome + privacy promise.** One paragraph: "Your data never leaves this phone. There is no account. No one — including the developer — can see what you log." "Continue" button.
 2. **Goal picker (multi-select).** Options: Track period, Track symptoms, Manage a condition (PCOS / endometriosis / perimenopause), Avoid pregnancy *(shows ovulation window — not for contraception)*, Trying to conceive, Just curious. The selection set drives which features appear. Default selected: Track period + Track symptoms.
-3. **Set PIN.** 6-digit minimum. "Use passphrase instead" link toggles to an alphanumeric input. Confirm by re-entry. Lost-PIN warning shown in plain language.
+3. **Set PIN.** 6-digit minimum. "Use passphrase instead" link toggles to an alphanumeric input. Confirm by re-entry. Lost-PIN warning shown in plain language. **PIN is always set, even in "Just for me" mode** — the database is encrypted with it regardless of how often it's required to unlock.
 4. **Enable biometric?** Optional toggle. Default on if device supports it; explanation: "Faster unlock. Your PIN is still required to recover if biometric fails."
-5. **Last period date** (skippable). Single date picker. Skipping means predictions start later, once enough cycles are logged. **Birth control method** is asked here too only if step 2 included "Avoid pregnancy" or "Trying to conceive" or "Just curious" — and is itself skippable.
+5. **Privacy preset (threat model picker).** Three options shown as cards. Default selected: "Locked when away."
+   - **Just for me** — *No lock screen. Anyone with your phone can open the app.* (Database is still encrypted with PIN; PIN required when changing presets or via explicit lock button.)
+   - ⭐ **Locked when away** — *Recommended. PIN required after 5 minutes of background. Quick to unlock.* Lock-screen notification previews suppressed; notification title is "Reminder."
+   - **Always locked** — *Maximum privacy. PIN every 30 seconds. Optional panic features.* Notifications fully suppressible; lock screen shows only the wordmark; duress PIN available in Settings.
+   - Caption beneath: "You can change this anytime in Settings."
+6. **Last period date** (skippable). Single date picker. Skipping means predictions start later, once enough cycles are logged. **Birth control method** is asked here too only if step 2 included "Avoid pregnancy" or "Trying to conceive" or "Just curious" — and is itself skippable.
 
 Onboarding decision logic (prose, not diagram):
 
@@ -213,11 +234,28 @@ Onboarding decision logic (prose, not diagram):
 
 ### 5.3 Lock and unlock
 
-- **Auto-lock triggers:** app backgrounded >30s, screen off, explicit lock button in app bar.
-- **On lock:** nav stack cleared, in-memory key zeroed, unlock screen shown.
-- **Unlock:** biometric prompt first if enabled; PIN as fallback. PIN entry has haptic feedback per digit, error shake on wrong PIN.
+Behavior depends on the user's threat-model preset (set in onboarding §5.1 step 5, editable in Settings).
+
+**Preset → behavior mapping:**
+
+| Setting | Just for me | Locked when away (default) | Always locked |
+|---|---|---|---|
+| Lock screen on app open | No (skip) | Yes if backgrounded ≥5 min | Yes if backgrounded ≥30s |
+| Biometric option | Available, optional | Available, on by default | Available, on by default |
+| Lock-screen notification preview | Visible | Suppressed | Suppressed |
+| Notification default title | "Tides" | "Reminder" | "Reminder" |
+| Duress PIN available | No | No | Yes (opt-in in Settings) |
+| Lock button in app bar | Yes (manual lock) | Yes | Yes |
+
+**Universal behavior (all presets):**
+
+- The database is always encrypted with the PIN-derived key. The preset only changes *when* the unlock screen appears, not whether the data is encrypted.
+- Under **"Just for me"**, the derived key is stored in Keystore (non-biometric-bound; protected only by app-private storage and Android's per-app sandboxing) so the app can open the DB at launch without prompting. This is *less secure* than the locked presets but the user has explicitly accepted that tradeoff. The Keystore copy is wiped when the user upgrades to a locked preset or explicitly locks the app.
+- Explicit lock button in the app bar always works regardless of preset.
+- Changing the preset requires PIN entry (prevents an attacker who has the phone from dropping to "Just for me").
+- PIN entry has haptic feedback per digit, error shake on wrong PIN.
 - **Rate-limit:** 5 wrong attempts → 30-second cooldown. Each subsequent batch doubles (30s, 60s, 120s, 240s, capped at 1 hour). Cooldown is enforced even if app is killed and relaunched (stored in `auth_meta.bin`).
-- **Duress PIN:** entered identically to the real PIN; routes to decoy or wipe based on setting; UI flow is identical to a successful unlock until the user notices the data is different (decoy mode) or until they realize their data is gone (wipe mode).
+- **Duress PIN** (only available under "Always locked" preset): entered identically to the real PIN; routes to decoy or wipe based on user's `duress_mode` setting; UI flow is identical to a successful unlock until the user notices the data is different (decoy mode) or until they realize their data is gone (wipe mode).
 
 ### 5.4 Lock state machine
 
@@ -241,7 +279,7 @@ stateDiagram-v2
     DuressWipe --> Onboarding: wipe complete, fresh state
 ```
 
-### 5.5 Phases and predictions
+### 5.5 Phases, predictions, and calendar view toggles
 
 For users with non-hormonal birth control (or "none") and goals that include period tracking:
 
@@ -250,22 +288,91 @@ For users with non-hormonal birth control (or "none") and goals that include per
 - Predicted period is displayed as a **range band** under the calendar (e.g., May 28 – Jun 1), not a single date. Band width reflects confidence: narrow for users with regular cycles (<2 day variance), wider for irregular.
 - **Suppressed entirely** if the user is on hormonal contraception or the goal set doesn't include period/fertility tracking.
 
+**Calendar view toggles.** A small chip row above the calendar lets the user filter what they see:
+
+- **All** (default) — period circles + ovulation rings + symptom dots + predicted period bar + phase progress card
+- **Period only** — period circles + predicted period bar; phase card collapses; ovulation and symptom indicators hidden
+- **Phases** — phase progress card prominent; calendar cells get subtle phase-colored backgrounds; period circles still shown; symptom dots hidden
+- **Symptoms** — symptom dots prominent; period and ovulation faded to background; useful for users tracking symptoms across cycles
+
+The selected view persists in `settings.calendar_view`. The toggle row uses text chips with selected-state ink, not color-only.
+
 ### 5.6 Stats / Insights
 
+**Core stats** (always visible):
 - Range selector (3mo, 6mo, 1yr, All)
 - Two summary cards: avg cycle length (with variance), avg period length (stable/varying)
 - Bar chart: cycle length over last N cycles
 - Top symptoms list: bar chart of frequency, top 4–6 symptoms
-- Export buttons: PDF, CSV
+- Export buttons: PDF, CSV (one-tap share — see §5.7)
 
-### 5.7 PDF report (report-card style)
+**Additional analyses** (revealed via tabs or expandable sections to avoid clutter):
 
-- One page where possible; paginates for large ranges.
+- **Symptom-cycle heatmap.** For each tracked symptom, a heatmap shows on which cycle days that symptom is typically logged across the last N cycles. Helps users see patterns ("cramps days 1–2," "headache around ovulation").
+- **Cycle regularity score** — plain language ("very regular" / "moderately variable" / "highly variable") with the day-variance number alongside for users who want it. FIGO-aligned (variation ≤7 days = regular).
+- **Period length trend** — "Your period has been getting shorter / longer / staying stable" with a sparkline.
+- **Flow heaviness over time** — sparkline of dominant flow intensity per cycle.
+- **"What does this mean?"** info button on each stat — tap to see a plain-language explanation. No medical advice; just context (e.g., "FIGO defines a cycle as irregular if shortest-to-longest varies by more than 7 days").
+
+**Monthly insights card.** Once per new cycle (i.e., at most monthly), a single subtle card appears at the top of the Stats screen surfacing one reflective observation drawn from the user's own data. Examples:
+- "Your cycles have been more regular in the last 3 months."
+- "Cramps are most commonly logged on days 1–2 of your period."
+- "Your typical cycle length is now 29 days, slightly longer than 6 months ago."
+
+The card is dismissible. It is **never** in notifications, never on the calendar screen, never frames predictions about future state ("you'll probably feel X"). All observations are derived on-device from the user's logged data. No "users like you" framing.
+
+**Explicitly excluded:**
+- Streaks, daily logging prompts, "you logged X days in a row" — research-contraindicated.
+- Predictive labels about mood, fertility outcomes, libido, energy.
+- Any framing that suggests medical interpretation ("your cycles suggest…").
+
+### 5.7 PDF / CSV export — one-tap share
+
+The export flow generates a file in-memory and immediately fires `Intent.ACTION_SEND` with a share sheet. One tap, system share UI, user picks email / Signal / Files app / print / anything. Same flow for PDF and CSV. "Save to a specific location" is available via long-press for users who want it but is not the default action.
+
+**Two PDF variants:**
+
+**1. Cycle Summary (default).** Report-card style for personal use.
 - Title: "Cycle Summary — [date range]"
-- Header: averages and variance
+- Header: averages, variance, top symptoms
 - Body: simple table of cycles (start date, length, period length, notable symptoms)
 - Footer: "Generated by Tides vX.Y.Z. Not a medical document. Do not use for diagnosis."
-- Generated using Android's built-in `PdfDocument` API — no third-party PDF library.
+
+**2. For My Doctor.** Clinician-formatted, FIGO-aligned (researched 2026-05-15 against ACOG Committee Opinion #651, FIGO System 1 [Munro 2018/2022], NICE NG88, GLOWM gynecologic history).
+
+- **Format constraints:** PDF/A, single file, <2 MB. US Letter + A4 portrait, single column, 11–12 pt minimum, black on white only (no light grey decorative text — must remain readable when printed or photocopied). No JavaScript, no hyperlinks. Target 2 pages; hard cap 4 pages.
+
+- **Page 1 — Summary (the only page many clinicians will read):**
+  - Header: "Menstrual Tracking Summary" • optional user name • optional date of birth • date range covered • date generated
+  - **LMP** (first day of last menstrual period) prominently displayed
+  - **Cycle stats box:** median length, min–max range, variation (days), # cycles tracked
+  - **Period stats box:** median duration, typical flow (using FIGO terminology), % cycles with heavy flow
+  - **Symptoms summary:** % of cycles with dysmenorrhea (severity 0–10 NRS), intermenstrual bleeding count, other tracked symptoms with frequency
+  - **Patterns of note** — auto-flagged using FIGO thresholds, *descriptive language only*. Examples:
+    - "Cycles outside the typical 24–38 day range (FIGO)"
+    - "Variation greater than 7 days (FIGO irregular)"
+    - "Period duration exceeded 8 days in N of M cycles (FIGO prolonged)"
+    - "Intermenstrual bleeding logged in N cycles"
+    - "Severe dysmenorrhea (≥7/10) logged in N cycles"
+    - "Amenorrhea ≥90 days"
+  - Footer: "Patient-recorded data. Not a medical record. Not medical advice."
+
+- **Page 2 — Cycle log table.** One row per cycle. Columns: start date, length (days), period duration (days), flow (FIGO term), pain (0–10), symptoms/notes. **Rows where FIGO thresholds are crossed are bolded** (no color-only signal — readable when printed or photocopied).
+
+- **Page 3 (optional, toggled at export time) — Calendar heatmap** of last 6–12 months. Black/white only. Period days, spotting, pain intensity by shade.
+
+- **Sensitive content opt-ins at export time** (checkboxes, all default off):
+  - Include name and date of birth
+  - Include sexual activity / contraception details
+  - Include calendar heatmap (page 3)
+
+- **What this PDF deliberately does NOT contain:**
+  - No app-generated diagnoses or risk labels ("you may have PCOS")
+  - No fertility window or ovulation predictions framed as fact (if shown at all, labeled clearly as algorithmic estimate)
+  - No decorative graphics, mood emojis, or app branding in the body
+  - No fake patient ID, ICD codes, or clinician signature blocks (would create chart-confusion and liability)
+
+Both variants generated using Android's built-in `PdfDocument` API — no third-party PDF library. Generation happens entirely on-device.
 
 ### 5.8 Encrypted backup and restore
 
@@ -291,7 +398,29 @@ For users with non-hormonal birth control (or "none") and goals that include per
 - Settings → "Check for updates" → `Intent.ACTION_VIEW` to GitHub Releases page.
 - README recommends Obtainium for users who want automatic update checking.
 
-### 5.12 Widget
+### 5.12 Notifications
+
+All notifications are **opt-in, individually toggleable in Settings, and strictly factual in copy**. Default notification title is **"Reminder"** (under "Locked when away" and "Always locked" presets) or **"Tides"** (under "Just for me" preset). Lock-screen previews are suppressed by default under both locked presets.
+
+**Notification types shipped in v1:**
+
+- **Period predicted.** "Period predicted in 3 days." Sent 3 days before the predicted period start. Once per cycle. Default off — user opts in.
+- **Period start reminder.** "Time to log? Period predicted today." Sent on the predicted start date *only* if the user hasn't logged a period within the predicted range. Once per cycle. Default off.
+- **Late period.** "Your period is 3 days later than predicted." Sent only if predicted + 3 days have passed with no period logged. Once per cycle. Default off. Copy is strictly neutral — never mentions pregnancy, never alarmist.
+
+**Explicitly excluded:**
+
+- Daily symptom logging prompts (off by default; users who want them can opt in)
+- Streak notifications, "you logged X days in a row" reminders
+- Any notification referencing libido, mood, hormones, or sexual activity
+- Any notification framed as the app *predicting* the user's emotional state
+
+**Lock-screen behavior:**
+
+- Under "Locked when away" and "Always locked" presets, notifications show only the title (default "Reminder") on the lock screen. Full notification text is visible only after unlock.
+- Under "Just for me" preset, notifications show full text on the lock screen by default; user can override in Settings.
+
+### 5.13 Widget
 
 - Read-only home-screen widget (Glance API).
 - Two variants user picks at install:
@@ -408,7 +537,32 @@ CVD screenshots regenerated on any change to calendar/stats/log/widget UI. Manua
 
 ---
 
-## 8. Release process
+## 8. Distribution and install
+
+The app is never published to Google Play. Distribution is via signed APK on GitHub Releases, with two third-party auto-update paths supported as v1.0 commitments.
+
+### Channels
+
+- **GitHub Releases (primary).** Signed APK attached to each release. README provides SHA-256 hash for manual verification. Release notes pulled from CHANGELOG.md.
+- **F-Droid (v1.0 commitment).** F-Droid metadata maintained in `fastlane/metadata/android/` per the F-Droid client spec. Initial submission via merge request to the F-Droid Data repo within 2 weeks of v1.0 ship. F-Droid handles its own signing and provides automatic updates to users who install via the F-Droid client. Reaches the privacy-maximalist audience natively (F-Droid is the canonical sideload store for that demographic).
+- **Obtainium (recipe in README).** README provides a copy-pasteable Obtainium config (GitHub repo URL + APK pattern) so users running Obtainium get automatic update checks against GitHub Releases without the developer running any infrastructure.
+
+### Install guide (README content)
+
+The README includes:
+- **Recommended install paths in order of friction:**
+  1. F-Droid client → search "Tides" → install
+  2. Obtainium → paste GitHub URL → install
+  3. Manual APK download from GitHub Releases
+- **Step-by-step "Install from unknown sources" walkthrough** for manual install, with screenshots covering Android 14+'s per-app source toggle and security warnings.
+- **30-second install video** linked in README (no autoplay; static thumbnail).
+- **SHA-256 verification instructions** for users who want to verify the APK signature before installing.
+
+### Why this matters
+
+Sideloading is the single highest-friction step in the user funnel. The combination of F-Droid + Obtainium covers ~80% of users who would otherwise abandon during install. Manual APK install with screenshots covers the remaining users who lack either tool.
+
+## 9. Release process
 
 - **Versioning:** Semver. Major = breaking schema change. Minor = new feature. Patch = bug fix.
 - **Branch model:** main is releasable. Feature branches → PR → squash-merge.
@@ -434,19 +588,23 @@ CVD screenshots regenerated on any change to calendar/stats/log/widget UI. Manua
 
 ---
 
-## 9. Out of scope (deferred to v2 or never)
+## 10. Out of scope (deferred to v2 or never)
 
-- **iOS support.** Apple 5.2.1 + no sideloading = not a solo-dev project.
+- **iOS support.** Apple 5.2.1 + no sideloading = not a solo-dev project. Never.
 - **Pregnancy mode.** Complex state transitions (loss, termination, postpartum); high risk of getting wrong; deferred to v2 after user feedback.
+- **Stealth mode (disguised icon).** Adds ~1 week to v1 timeline to do correctly (launcher cache, recents screen, accessibility tree all need to be considered). Flagged in v1.1 as a v2 commitment, not v1.
+- **Custom user-defined symptoms (free-form).** v1.1 decision: ship a curated taxonomy plus an "Other (note)" escape hatch. Free-form custom symptoms would fragment the data and break aggregate analytics. Not planned.
 - **Apple Watch / wearable integration.** No iOS, and Wear OS is a separate UI surface — defer.
-- **Cloud sync (any flavor).** Forbidden by threat model. User-controlled file backup via SAF is the supported pattern.
-- **Partner sharing.** Privacy implications, key management complexity. Defer.
+- **Cloud sync (any flavor).** Forbidden by threat model. User-controlled file backup via SAF is the supported pattern. Never.
+- **Partner sharing.** Privacy implications, key management complexity. v1.1 decision: not pursuing.
 - **Pill reminder / contraception tracking.** Out of scope; competes with dedicated apps.
-- **Telemetry, A/B testing, remote config.** Forbidden by threat model.
+- **Telemetry, A/B testing, remote config.** Forbidden by threat model. Never.
+- **In-app INTERNET permission.** v1.1 decision: locked out. Updates flow through F-Droid client / Obtainium / user-initiated browser visit to GitHub Releases. The app's manifest does not declare INTERNET. Never.
+- **EHR / patient portal direct integration** (Epic MyChart, Cerner, etc.). PDF export via system share sheet is the supported path.
 
 ---
 
-## 10. Open questions and known risks
+## 11. Open questions and known risks
 
 1. **Donation address.** Need to register a dedicated feedback email and a Ko-fi/GitHub Sponsors page before launch. Personal email should not appear in the app.
 2. **Custom symptom storage.** User-defined symptom names could contain sensitive data; they are stored encrypted alongside everything else. No special handling required, but flagged.
@@ -457,7 +615,7 @@ CVD screenshots regenerated on any change to calendar/stats/log/widget UI. Manua
 
 ---
 
-## 11. Approval
+## 12. Approval
 
 Author: hayate0726
 Approved by user: _pending_
