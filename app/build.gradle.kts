@@ -105,3 +105,7 @@ dependencies {
     debugImplementation(libs.compose.ui.test.manifest)
     androidTestImplementation(libs.mockk.android)
 }
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
