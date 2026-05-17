@@ -382,7 +382,9 @@ Both variants generated using Android's built-in `PdfDocument` API — no third-
 
 ### 5.9 Donation
 
-- Settings → "Support development" → small explainer ("This app is free forever. Donations help me keep building.") → buttons for Ko-fi / GitHub Sponsors → each fires `Intent.ACTION_VIEW` to that URL.
+- Settings → "Support development" → small explainer ("This app is free forever. Donations help me keep building.") → buttons for Ko-fi and GitHub Sponsors → each fires `Intent.ACTION_VIEW` to that URL.
+- **Ko-fi destination:** `https://ko-fi.com/hayate0726`
+- GitHub Sponsors destination: TBD (set up if/when needed; Ko-fi alone is sufficient for v1).
 - Never nagged, never on the main screen, never a popup.
 
 ### 5.10 Feedback
@@ -606,8 +608,8 @@ Sideloading is the single highest-friction step in the user funnel. The combinat
 
 ## 11. Open questions and known risks
 
-1. **Donation address.** Need to register a dedicated feedback email and a Ko-fi/GitHub Sponsors page before launch. Personal email should not appear in the app.
-2. **Custom symptom storage.** User-defined symptom names could contain sensitive data; they are stored encrypted alongside everything else. No special handling required, but flagged.
+1. **Feedback email address.** Still need a dedicated address (not the developer's personal email) for the in-app "Send feedback" mailto target. Ko-fi page is set up (https://ko-fi.com/hayate0726). GitHub Sponsors not currently planned for v1.
+2. **"Other (note)" symptom storage.** Free-text notes attached to the OTHER symptom type could contain sensitive information; they are stored encrypted in the same SQLCipher database as all other data. Excluded from frequency analytics; surface in doctor PDF appendix only. No special handling required, but flagged.
 3. **Keystore lost on factory reset / device migration.** Biometric-bound keys do not survive device migration. Users restoring on a new device must re-enter PIN; the wrapped key in the old Keystore is gone. This is acceptable and matches user expectation; flagged for the privacy README.
 4. **Predictions during the first 2 cycles.** Insufficient data for meaningful prediction. App displays "Logging more cycles will improve predictions" instead of showing a range.
 5. **PCOS / very irregular cycles.** The simple median-based prediction may produce unhelpful results for users with high variance. Mitigation: show wider range bands, surface variance in the stats screen, and offer to suppress prediction entirely in Settings.
