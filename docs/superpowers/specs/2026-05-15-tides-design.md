@@ -389,10 +389,28 @@ Both variants generated using Android's built-in `PdfDocument` API — no third-
 
 ### 5.10 Feedback
 
-- Settings → "Send feedback" → compose screen with: free-text field, optional "Include diagnostic info" checkbox.
+Two channels, presented as a choice on the feedback screen so users can pick the right one for their situation.
+
+**Settings → "Send feedback"** opens a screen with two options:
+
+**1. Report a bug (public)** — opens `Intent.ACTION_VIEW` to a pre-filled GitHub Issues URL:
+`https://github.com/hayate0726/tides/issues/new?labels=feedback&template=feedback.yml&...`
+- Pre-fills title and body with optional diagnostic info if the user checked "Include diagnostic info."
+- Requires the user to have (or create) a GitHub account.
+- Public by design — visible to other users, useful for deduplication and community knowledge.
+- **Best for:** crashes, UI bugs, feature requests, anything where being public is fine.
+
+**2. Send private feedback (email)** — opens `Intent.ACTION_SENDTO` with `mailto:0726hayate@gmail.com`:
+- Pre-fills subject and body with optional diagnostic info.
+- Goes to a dedicated inbox the developer monitors.
+- **Best for:** sensitive feedback, privacy concerns, anything the user doesn't want to be public.
+
+**Shared behavior (both channels):**
+
+- The compose screen offers an "Include diagnostic info" checkbox.
 - Diagnostic info, if checked, appends only: app version, Android version, device model, locale, theme, last 5 non-fatal errors (truncated).
 - **Never included:** cycle data, symptom data, notes, PIN, BC method, dates of entries.
-- "Send" fires `Intent.ACTION_SENDTO` with `mailto:` to a dedicated feedback address. User's email app opens; user reviews and sends.
+- The app constructs the URL/intent locally with the user's typed message; the user reviews the full content in their browser (GitHub) or email app before submitting/sending. The app itself sends nothing.
 
 ### 5.11 Update check
 
@@ -608,7 +626,7 @@ Sideloading is the single highest-friction step in the user funnel. The combinat
 
 ## 11. Open questions and known risks
 
-1. **Feedback email address.** Still need a dedicated address (not the developer's personal email) for the in-app "Send feedback" mailto target. Ko-fi page is set up (https://ko-fi.com/hayate0726). GitHub Sponsors not currently planned for v1.
+1. **External endpoints (resolved).** Ko-fi donation page: https://ko-fi.com/hayate0726. Feedback email: 0726hayate@gmail.com. Bug reports: GitHub Issues (`hayate0726/tides`). GitHub Sponsors not planned for v1.
 2. **"Other (note)" symptom storage.** Free-text notes attached to the OTHER symptom type could contain sensitive information; they are stored encrypted in the same SQLCipher database as all other data. Excluded from frequency analytics; surface in doctor PDF appendix only. No special handling required, but flagged.
 3. **Keystore lost on factory reset / device migration.** Biometric-bound keys do not survive device migration. Users restoring on a new device must re-enter PIN; the wrapped key in the old Keystore is gone. This is acceptable and matches user expectation; flagged for the privacy README.
 4. **Predictions during the first 2 cycles.** Insufficient data for meaningful prediction. App displays "Logging more cycles will improve predictions" instead of showing a range.
