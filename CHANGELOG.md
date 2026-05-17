@@ -6,6 +6,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added — Plan 2: Data & Domain
+- `domain/model/` leaf types: `FlowIntensity`, `Symptom` (curated 8-category taxonomy + `OTHER` freetext), `BirthControlMethod`, `Goal`, `CalendarView`, `ThreatPreset`, `CycleDay`, `PredictionRange`, `Cycle`, `Phase`
+- `domain/` pure-Kotlin logic (no Android imports):
+  - `CycleDetector` — period-day entries → `List<Cycle>`
+  - `CycleStats` — median cycle/period length, range, regularity bucket, period-length trend
+  - `CyclePredictor` — next-period `PredictionRange` with `Confidence`
+  - `PhaseCalculator` — current `Phase` + fertile window (clinical fixed-luteal formula `ovulationDay = medianLength - 14`, ±2-day window, suppressed for cycles outside 21..35d)
+  - `SymptomStats` — frequency map + cycle-day heatmap (OTHER excluded from aggregates)
+  - `FigoAnalysis` — FIGO System 1 pattern detection (frequency, regularity, duration, volume, dysmenorrhea, amenorrhea, intermenstrual bleeding) per ACOG #651 / Munro 2018
+- `data/entity/`: real Room schema replacing the Plan 1 placeholder — `CycleEntryEntity`, `SymptomEntryEntity`, `BirthControlEntity`, `SettingsEntity`, `GoalEntity`
+- `data/dao/`: one-shot suspend + reactive `Flow` reads, `@Upsert/@Insert/@Update/@Delete` writes for every entity
+- `data/Converters.kt`: `LocalDate` ↔ epoch day, plus enum ↔ string converters
+- `data/CycleRepository.kt`: the single seam between DAOs and domain types
+- Room schema exported to `app/schemas/com.hayate0726.tides.data.TidesDatabase/1.json` (committed; future migrations diff against it)
+
+### Changed — Plan 2
+- Plan 1 instrumented tests updated to write/read real `CycleEntryEntity` rows instead of the deleted `Placeholder` entity. All 11 instrumented tests still pass.
+
 ### Added — Plan 1: Foundation & Crypto
 - Project scaffold: Gradle 8.9, Kotlin 2.0, AGP 8.5, Hilt, Compose, Room + SQLCipher (`sqlcipher-android` 4.5.4), argon2kt 1.6.0
 - `crypto/` package:
