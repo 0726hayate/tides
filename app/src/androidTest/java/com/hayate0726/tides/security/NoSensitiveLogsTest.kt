@@ -6,7 +6,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.hayate0726.tides.crypto.KeyDerivation
 import com.hayate0726.tides.crypto.Pin
 import com.hayate0726.tides.data.DatabaseFactory
-import com.hayate0726.tides.data.Placeholder
+import com.hayate0726.tides.data.entity.CycleEntryEntity
+import com.hayate0726.tides.domain.model.FlowIntensity
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -14,6 +15,7 @@ import org.junit.runner.RunWith
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
+import java.time.LocalDate
 
 /**
  * Invariant: a PIN we feed in, and a row payload we write, MUST NOT
@@ -41,13 +43,19 @@ class NoSensitiveLogsTest {
         pin.zero()
 
         val db = DatabaseFactory.open(ctx, dbFile, key)
-        db.placeholderDao().insert(Placeholder(1, flowMarker))
+        db.cycleEntryDao().upsert(
+            CycleEntryEntity(
+                date = LocalDate.parse("2026-05-01"),
+                flowIntensity = FlowIntensity.LIGHT,
+                painSeverity = null,
+                notes = flowMarker,
+            )
+        )
         db.close()
         key.zero()
 
         val proc = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "raw"))
-        val reader = BufferedReader(InputStreamReader(proc.inputStream))
-        val all = reader.readText()
+        val all = BufferedReader(InputStreamReader(proc.inputStream)).readText()
         proc.destroy()
 
         assertFalse("PIN content appeared in logcat", all.contains(secretMarker))

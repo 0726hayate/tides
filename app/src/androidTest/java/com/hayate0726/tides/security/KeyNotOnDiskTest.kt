@@ -7,13 +7,15 @@ import com.hayate0726.tides.crypto.DbKey
 import com.hayate0726.tides.crypto.KeyDerivation
 import com.hayate0726.tides.crypto.Pin
 import com.hayate0726.tides.data.DatabaseFactory
-import com.hayate0726.tides.data.Placeholder
+import com.hayate0726.tides.data.entity.CycleEntryEntity
+import com.hayate0726.tides.domain.model.FlowIntensity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.time.LocalDate
 
 /**
  * Invariant: the 32-byte derived database key MUST NOT appear in clear
@@ -36,7 +38,7 @@ class KeyNotOnDiskTest {
     }
 
     @Test
-    fun no_app_private_file_contains_the_derived_key_bytes() = runBlocking {
+    fun no_app_private_file_contains_the_derived_key_bytes(): Unit = runBlocking {
         ctx = ApplicationProvider.getApplicationContext()
         dbFile = File(ctx.filesDir, "key_leak_check.db")
         dbFile.delete()
@@ -48,7 +50,14 @@ class KeyNotOnDiskTest {
         val needle = key.bytes.copyOf()
 
         val db = DatabaseFactory.open(ctx, dbFile, key)
-        db.placeholderDao().insert(Placeholder(1, "x"))
+        db.cycleEntryDao().upsert(
+            CycleEntryEntity(
+                date = LocalDate.parse("2026-05-01"),
+                flowIntensity = FlowIntensity.LIGHT,
+                painSeverity = null,
+                notes = "x",
+            )
+        )
         db.close()
         key.zero()
 
