@@ -16,7 +16,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -27,7 +28,12 @@ fun ThreatPresetScreen(
     initial: ThreatPreset,
     onContinue: (ThreatPreset) -> Unit,
 ) {
-    var selected by remember { mutableStateOf(initial) }
+    var selected by rememberSaveable(
+        stateSaver = Saver<ThreatPreset, String>(
+            save = { it.name },
+            restore = { ThreatPreset.valueOf(it) },
+        ),
+    ) { mutableStateOf(initial) }
 
     val options = listOf(
         Triple(ThreatPreset.JUST_FOR_ME, "Just for me",

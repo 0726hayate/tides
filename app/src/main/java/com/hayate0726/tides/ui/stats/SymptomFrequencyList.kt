@@ -18,7 +18,8 @@ import com.hayate0726.tides.domain.model.Symptom
 @Composable
 fun SymptomFrequencyList(frequency: Map<Symptom, Int>) {
     if (frequency.isEmpty()) return
-    val max = frequency.values.max()
+    // coerceAtLeast(1) guards against all-zero counts (count/max -> NaN -> width NaN).
+    val max = frequency.values.max().coerceAtLeast(1)
     Column {
         frequency.entries.sortedByDescending { it.value }.take(6).forEach { (sym, count) ->
             Row(

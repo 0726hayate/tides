@@ -1,14 +1,17 @@
 package com.hayate0726.tides.ui.nav
 
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
+import com.hayate0726.tides.data.TidesDatabase
 import com.hayate0726.tides.ui.onboarding.BiometricSetupScreen
 import com.hayate0726.tides.ui.onboarding.GoalsScreen
 import com.hayate0726.tides.ui.onboarding.LastPeriodScreen
+import com.hayate0726.tides.ui.onboarding.OnboardingComplete
 import com.hayate0726.tides.ui.onboarding.OnboardingViewModel
 import com.hayate0726.tides.ui.onboarding.PinSetupScreen
 import com.hayate0726.tides.ui.onboarding.ThreatPresetScreen
@@ -16,15 +19,15 @@ import com.hayate0726.tides.ui.onboarding.WelcomeScreen
 
 fun NavGraphBuilder.onboardingNavGraph(
     nav: NavHostController,
-    onComplete: () -> Unit,
+    onComplete: (TidesDatabase) -> Unit,
 ) {
     navigation(startDestination = Routes.Welcome, route = Routes.Onboarding) {
         composable(Routes.Welcome) {
             WelcomeScreen(onContinue = { nav.navigate(Routes.Goals) })
         }
         composable(Routes.Goals) {
-            val vm: OnboardingViewModel = sharedOnboardingVm(nav.getBackStackEntry(Routes.Onboarding))
-            val draft by vm.draft.collectAsState()
+            val vm = sharedOnboardingVm(nav)
+            val draft by vm.draft.collectAsStateWithLifecycle()
             GoalsScreen(
                 initialGoals = draft.goals,
                 onContinue = {
@@ -34,15 +37,15 @@ fun NavGraphBuilder.onboardingNavGraph(
             )
         }
         composable(Routes.PinSetup) {
-            val vm: OnboardingViewModel = sharedOnboardingVm(nav.getBackStackEntry(Routes.Onboarding))
+            val vm = sharedOnboardingVm(nav)
             PinSetupScreen(onContinue = {
                 vm.setPin(it)
                 nav.navigate(Routes.BiometricSetup)
             })
         }
         composable(Routes.BiometricSetup) {
-            val vm: OnboardingViewModel = sharedOnboardingVm(nav.getBackStackEntry(Routes.Onboarding))
-            val draft by vm.draft.collectAsState()
+            val vm = sharedOnboardingVm(nav)
+            val draft by vm.draft.collectAsStateWithLifecycle()
             BiometricSetupScreen(
                 initialEnabled = draft.biometricEnabled,
                 onContinue = {
@@ -52,8 +55,8 @@ fun NavGraphBuilder.onboardingNavGraph(
             )
         }
         composable(Routes.ThreatPreset) {
-            val vm: OnboardingViewModel = sharedOnboardingVm(nav.getBackStackEntry(Routes.Onboarding))
-            val draft by vm.draft.collectAsState()
+            val vm = sharedOnboardingVm(nav)
+            val draft by vm.draft.collectAsStateWithLifecycle()
             ThreatPresetScreen(
                 initial = draft.threatPreset,
                 onContinue = {
@@ -63,19 +66,30 @@ fun NavGraphBuilder.onboardingNavGraph(
             )
         }
         composable(Routes.LastPeriod) {
-            val vm: OnboardingViewModel = sharedOnboardingVm(nav.getBackStackEntry(Routes.Onboarding))
+            val vm = sharedOnboardingVm(nav)
             LastPeriodScreen(onFinish = {
                 vm.setLastPeriodStart(it)
                 vm.complete()
-                onComplete()
+                nav.navigate(Routes.OnboardingCompleteRoute)
             })
+        }
+        composable(Routes.OnboardingCompleteRoute) {
+            val vm = sharedOnboardingVm(nav)
+            val db by vm.completion.collectAsStateWithLifecycle()
+            LaunchedEffect(db) {
+                db?.let { onComplete(it) }
+            }
+            OnboardingComplete()
         }
     }
 }
 
-// Helper to share the OnboardingViewModel across the nav graph by scoping it to
-// the parent NavBackStackEntry (the "onboarding" route).
+/**
+ * Share the OnboardingViewModel across the nav graph by scoping it to the
+ * parent NavBackStackEntry (the "onboarding" route).
+ */
 @androidx.compose.runtime.Composable
-private fun sharedOnboardingVm(parentEntry: androidx.navigation.NavBackStackEntry): OnboardingViewModel {
+private fun sharedOnboardingVm(nav: NavHostController): OnboardingViewModel {
+    val parentEntry = nav.getBackStackEntry(Routes.Onboarding)
     return androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = parentEntry)
 }

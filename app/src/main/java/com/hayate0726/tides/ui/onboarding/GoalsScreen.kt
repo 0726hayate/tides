@@ -19,8 +19,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -31,7 +32,12 @@ fun GoalsScreen(
     initialGoals: Set<Goal>,
     onContinue: (Set<Goal>) -> Unit,
 ) {
-    var selected by remember { mutableStateOf(initialGoals) }
+    var selected by rememberSaveable(
+        stateSaver = listSaver<Set<Goal>, String>(
+            save = { it.map(Goal::name) },
+            restore = { it.map(Goal::valueOf).toSet() },
+        ),
+    ) { mutableStateOf(initialGoals) }
 
     val items = listOf(
         Goal.TRACK_PERIOD to ("Track my period" to "Log days, see history"),

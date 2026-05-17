@@ -128,9 +128,12 @@ private fun DayCell(
                 }
             }
             if (isPredictedPeriod) {
-                // Predicted: outlined drop glyph in secondary color, no fill
                 Box(modifier = Modifier.size(28.dp).padding(2.dp), contentAlignment = Alignment.TopEnd) {
-                    DropGlyph(color = MaterialTheme.colorScheme.secondary, size = 5.dp)
+                    DropGlyph(
+                        color = MaterialTheme.colorScheme.secondary,
+                        size = 5.dp,
+                        filled = false,
+                    )
                 }
             }
             if (isOvulation) {

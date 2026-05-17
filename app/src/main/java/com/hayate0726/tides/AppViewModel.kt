@@ -3,7 +3,9 @@ package com.hayate0726.tides
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hayate0726.tides.crypto.AuthMeta
 import com.hayate0726.tides.crypto.FileAuthMetaStore
+import com.hayate0726.tides.crypto.KeyDerivation
 import com.hayate0726.tides.crypto.Pin
 import com.hayate0726.tides.data.DatabaseFactory
 import com.hayate0726.tides.data.TidesDatabase
@@ -16,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -29,54 +32,64 @@ class AppViewModel @Inject constructor(
     private val lockManager: LockManager,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<AppState>(initialState())
+    private val _state = MutableStateFlow<AppState>(AppState.Loading)
     val state: StateFlow<AppState> = _state.asStateFlow()
 
-    private fun initialState(): AppState =
-        if (authMetaFile.exists()) AppState.Locked else AppState.Onboarding
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.value = if (authMetaFile.exists()) AppState.Locked else AppState.Onboarding
+        }
+    }
 
     fun onUnlockAttempt(pin: Pin) {
         viewModelScope.launch(Dispatchers.IO) {
+            // Clone the PIN chars so we can keep using them in the duress branch
+            // after lockManager.attemptUnlock has had its (zeroed) copy.
+            val pinChars = pin.chars.copyOf()
             val result = lockManager.attemptUnlock(pin)
             pin.zero()
-            when (result) {
-                is LockManager.UnlockResult.Success -> {
-                    val db = DatabaseFactory.open(ctx, dbFile, result.key)
-                    result.key.zero()
-                    _state.value = AppState.Unlocked(db)
-                }
-                LockManager.UnlockResult.WrongPin -> {
-                    // state unchanged; UI shows error
-                }
-                is LockManager.UnlockResult.RateLimited -> {
-                    _state.value = AppState.LockedCooldown(result.expiryEpochMs)
-                }
-                LockManager.UnlockResult.Duress -> {
-                    val decoyFile = File(ctx.filesDir, "decoy.db")
-                    val meta = authMetaStore.load()
-                    when (meta.duress!!.mode) {
-                        com.hayate0726.tides.crypto.AuthMeta.DuressMode.DECOY -> {
-                            val key = com.hayate0726.tides.crypto.KeyDerivation.deriveKey(
-                                Pin("dummy".toCharArray()),  // decoy DB uses its own derived key from duress PIN, see onboarding
-                                meta.duress.keySalt,
-                            )
-                            // Note: full decoy flow re-derives from the entered duress PIN.
-                            // For Plan 3 simplicity, decoy DB uses the duress PIN's key.
-                            val db = DatabaseFactory.open(ctx, decoyFile, key)
-                            key.zero()
-                            _state.value = AppState.UnlockedDecoy(db)
-                        }
-                        com.hayate0726.tides.crypto.AuthMeta.DuressMode.WIPE -> {
-                            // Wipe: delete real and decoy DBs, reset auth_meta.bin
-                            dbFile.delete()
-                            decoyFile.delete()
-                            authMetaFile.delete()
-                            _state.value = AppState.Onboarding
-                        }
-                        com.hayate0726.tides.crypto.AuthMeta.DuressMode.OFF -> Unit
+            try {
+                when (result) {
+                    is LockManager.UnlockResult.Success -> {
+                        val db = DatabaseFactory.open(ctx, dbFile, result.key)
+                        result.key.zero()
+                        _state.update { AppState.Unlocked(db) }
                     }
+                    LockManager.UnlockResult.WrongPin -> {
+                        // state unchanged; UI shows error
+                    }
+                    is LockManager.UnlockResult.RateLimited -> {
+                        _state.update { AppState.LockedCooldown(result.expiryEpochMs) }
+                    }
+                    LockManager.UnlockResult.Duress -> handleDuress(pinChars)
                 }
+            } finally {
+                java.util.Arrays.fill(pinChars, 0.toChar())
             }
+        }
+    }
+
+    private suspend fun handleDuress(pinChars: CharArray) {
+        val meta = authMetaStore.load()
+        val duress = meta.duress ?: return
+        when (duress.mode) {
+            AuthMeta.DuressMode.DECOY -> {
+                val decoyFile = File(ctx.filesDir, "decoy.db")
+                val duressPin = Pin(pinChars.copyOf())
+                val key = KeyDerivation.deriveKey(duressPin, duress.keySalt)
+                duressPin.zero()
+                val db = DatabaseFactory.open(ctx, decoyFile, key)
+                key.zero()
+                _state.update { AppState.UnlockedDecoy(db) }
+            }
+            AuthMeta.DuressMode.WIPE -> {
+                val decoyFile = File(ctx.filesDir, "decoy.db")
+                dbFile.delete()
+                decoyFile.delete()
+                authMetaFile.delete()
+                _state.update { AppState.Onboarding }
+            }
+            AuthMeta.DuressMode.OFF -> Unit
         }
     }
 
@@ -84,16 +97,12 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             (_state.value as? AppState.Unlocked)?.db?.close()
             (_state.value as? AppState.UnlockedDecoy)?.db?.close()
-            _state.value = AppState.Locked
+            _state.update { AppState.Locked }
         }
     }
 
-    fun onOnboardingComplete() {
-        // Onboarding wrote auth_meta.bin and created the DB; transition to Unlocked.
-        // The caller passes the db via a separate method; see OnboardingViewModel.
-    }
-
+    /** Called by OnboardingViewModel once auth_meta.bin and the DB exist. */
     fun setUnlocked(db: TidesDatabase) {
-        _state.value = AppState.Unlocked(db)
+        _state.update { AppState.Unlocked(db) }
     }
 }

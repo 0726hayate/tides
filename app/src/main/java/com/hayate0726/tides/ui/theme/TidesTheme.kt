@@ -8,10 +8,18 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
+/**
+ * useDynamicColor defaults to FALSE so the CVD-safe palette in TidesColors
+ * actually renders. The colors are part of the app's identity and the result
+ * of explicit accessibility research (see /mockups/direction-2-materialyou
+ * and the CVD simulations there). Dynamic Material You theming on Android
+ * 12+ would silently override that work. A Settings toggle for users who
+ * prefer dynamic color lands later.
+ */
 @Composable
 fun TidesTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    useDynamicColor: Boolean = true,
+    useDynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val ctx = LocalContext.current

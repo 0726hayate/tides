@@ -18,7 +18,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun CycleLengthChart(values: List<Int>, labels: List<String>) {
     if (values.isEmpty()) return
-    val maxVal = values.max().toFloat()
+    // coerceAtLeast(1f) guards against all-zero input (would otherwise NaN -> Dp crash).
+    val maxVal = values.max().toFloat().coerceAtLeast(1f)
     Row(modifier = Modifier.fillMaxWidth().height(110.dp)) {
         values.forEachIndexed { i, v ->
             Column(

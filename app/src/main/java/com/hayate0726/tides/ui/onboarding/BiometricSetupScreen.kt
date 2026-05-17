@@ -14,7 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,7 +25,7 @@ fun BiometricSetupScreen(
     initialEnabled: Boolean,
     onContinue: (Boolean) -> Unit,
 ) {
-    var enabled by remember { mutableStateOf(initialEnabled) }
+    var enabled by rememberSaveable { mutableStateOf(initialEnabled) }
 
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
         Text("Faster unlock?", style = MaterialTheme.typography.headlineLarge)

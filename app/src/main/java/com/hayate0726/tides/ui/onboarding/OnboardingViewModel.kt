@@ -100,7 +100,11 @@ class OnboardingViewModel @Inject constructor(
                 db.cycleEntryDao().upsert(
                     CycleEntryEntity(
                         date = lpd,
-                        flowIntensity = FlowIntensity.MEDIUM,
+                        // LIGHT is the minimal non-zero flow; user only confirmed a
+                        // start date during onboarding, not an intensity. They can
+                        // edit it later from the calendar. MEDIUM (the previous
+                        // hardcoded value) silently overstated their data.
+                        flowIntensity = FlowIntensity.LIGHT,
                         painSeverity = null,
                         notes = null,
                     )

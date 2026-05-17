@@ -3,6 +3,9 @@ package com.hayate0726.tides
 import com.hayate0726.tides.data.TidesDatabase
 
 sealed interface AppState {
+    /** Initial state while AppViewModel checks auth_meta.bin on disk. */
+    data object Loading : AppState
+
     /** No auth_meta.bin yet — first launch, route to onboarding. */
     data object Onboarding : AppState
 

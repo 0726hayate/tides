@@ -1,6 +1,8 @@
 package com.hayate0726.tides.ui.theme
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -21,17 +23,29 @@ import androidx.compose.ui.unit.dp
  * Drawn as a rounded square rotated -45°.
  */
 @Composable
-fun DropGlyph(color: Color, size: Dp = 6.dp, modifier: Modifier = Modifier) {
+fun DropGlyph(
+    color: Color,
+    size: Dp = 6.dp,
+    modifier: Modifier = Modifier,
+    /**
+     * When false, draws only the outline. Use for *predicted* period days
+     * so users can distinguish them from logged (filled) period days.
+     */
+    filled: Boolean = true,
+) {
     Canvas(modifier = modifier.size(size)) {
         val w = this.size.minDimension
         val path = Path().apply {
-            // Square top-right corner pointed, bottom-left/right/top rounded
             moveTo(w * 0.5f, 0f)
             cubicTo(w * 0.9f, w * 0.2f, w, w * 0.5f, w * 0.5f, w)
             cubicTo(0f, w * 0.5f, w * 0.1f, w * 0.2f, w * 0.5f, 0f)
             close()
         }
-        drawPath(path, color = color)
+        if (filled) {
+            drawPath(path, color = color)
+        } else {
+            drawPath(path, color = color, style = Stroke(width = w * 0.18f))
+        }
     }
 }
 
@@ -63,7 +77,9 @@ fun DashedBar(
     modifier: Modifier = Modifier,
     height: Dp = 3.dp,
 ) {
-    Canvas(modifier = modifier.size(width = 100.dp, height = height)) {
+    // Caller's modifier wins (so it can fillMaxWidth or set a specific width);
+    // height is applied last so it always takes effect.
+    Canvas(modifier = modifier.fillMaxWidth().height(height)) {
         drawLine(
             color = color,
             start = androidx.compose.ui.geometry.Offset(0f, this.size.height / 2),
