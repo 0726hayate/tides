@@ -6,16 +6,12 @@ import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.condition.EnabledOnOs
-import org.junit.jupiter.api.condition.OS
 
 /**
- * Note: Argon2kt ships native code. These tests run on the JVM via Robolectric
- * if the platform supports it; on hosts without the right native arch they will
- * be skipped. Full coverage relies on instrumented tests on real Android.
+ * Note: Argon2kt ships native code that doesn't load on the JVM/Robolectric.
+ * Full coverage relies on instrumented tests on real Android.
  */
 @Disabled("argon2kt native lib not available on JVM; covered by instrumented tests in Plan 1 Task 8/9")
-@EnabledOnOs(OS.LINUX, OS.MAC, OS.WINDOWS)
 class Argon2Test {
 
     @Test

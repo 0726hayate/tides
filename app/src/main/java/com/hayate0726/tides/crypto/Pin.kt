@@ -1,5 +1,6 @@
 package com.hayate0726.tides.crypto
 
+import java.nio.CharBuffer
 import java.util.Arrays
 
 /**
@@ -24,7 +25,11 @@ class Pin(chars: CharArray) {
      */
     fun toUtf8Bytes(): ByteArray {
         val chars = _chars ?: throw IllegalStateException("Pin has been zeroed")
-        return String(chars).toByteArray(Charsets.UTF_8)
+        val byteBuffer = Charsets.UTF_8.encode(CharBuffer.wrap(chars))
+        val out = ByteArray(byteBuffer.remaining())
+        byteBuffer.get(out)
+        Arrays.fill(byteBuffer.array(), 0)
+        return out
     }
 
     fun zero() {
