@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lock — Light</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f1ece4;
+    font-family: 'Google Sans', 'Roboto', sans-serif;
+    display: flex; justify-content: center; padding: 40px 20px;
+    color: #1d1b16;
+  }
+  .phone {
+    width: 390px; background: #faf5ec;
+    border-radius: 44px; padding: 14px;
+    box-shadow: 0 30px 80px rgba(60,40,20,0.18);
+  }
+  .screen {
+    background: #faf5ec; border-radius: 32px; overflow: hidden;
+    height: 820px; padding: 28px 24px;
+    display: flex; flex-direction: column;
+  }
+  .status-bar {
+    display: flex; justify-content: space-between;
+    font-size: 13px; color: #6b6354; font-weight: 500; margin-bottom: 80px;
+  }
+  .app-name {
+    text-align: center;
+    font-size: 14px; font-weight: 600; letter-spacing: 0.18em;
+    color: #6b6354; text-transform: uppercase;
+    margin-bottom: 60px;
+  }
+  .dots {
+    display: flex; justify-content: center; gap: 16px;
+    margin-bottom: 36px;
+  }
+  .dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 1.5px solid #8a8270;
+  }
+  .dot.filled { background: #1d1b16; border-color: #1d1b16; }
+  .hint {
+    text-align: center; font-size: 12px; color: #8a8270;
+    margin-bottom: 36px;
+  }
+  .keypad {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    max-width: 280px; margin: 0 auto;
+  }
+  .key {
+    aspect-ratio: 1.4;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 500; color: #1d1b16;
+    background: #ebe1cc;
+  }
+  .key.action {
+    background: transparent;
+    font-size: 18px;
+    color: #6b6354;
+  }
+  .biometric-row {
+    margin-top: 32px;
+    display: flex; justify-content: center;
+    gap: 8px;
+    align-items: center;
+    color: #6b6354;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="screen">
+    <div class="status-bar"><span>9:41</span><span>● ● ●</span></div>
+    <div class="app-name">Tides</div>
+    <div class="dots">
+      <div class="dot filled"></div>
+      <div class="dot filled"></div>
+      <div class="dot filled"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+    <div class="hint">Enter your PIN</div>
+    <div class="keypad">
+      <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+      <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+      <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+      <div class="key action">↻</div><div class="key">0</div><div class="key action">⌫</div>
+    </div>
+    <div class="biometric-row">
+      <span style="font-size:18px;">◉</span> Use fingerprint
+    </div>
+  </div>
+</div>
+</body>
+</html>
