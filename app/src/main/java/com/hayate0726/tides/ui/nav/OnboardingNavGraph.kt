@@ -26,7 +26,7 @@ fun NavGraphBuilder.onboardingNavGraph(
             WelcomeScreen(onContinue = { nav.navigate(Routes.Goals) })
         }
         composable(Routes.Goals) {
-            val vm = sharedOnboardingVm(nav)
+            val vm = sharedOnboardingVm(nav) ?: return@composable
             val draft by vm.draft.collectAsStateWithLifecycle()
             GoalsScreen(
                 initialGoals = draft.goals,
@@ -37,14 +37,14 @@ fun NavGraphBuilder.onboardingNavGraph(
             )
         }
         composable(Routes.PinSetup) {
-            val vm = sharedOnboardingVm(nav)
+            val vm = sharedOnboardingVm(nav) ?: return@composable
             PinSetupScreen(onContinue = {
                 vm.setPin(it)
                 nav.navigate(Routes.BiometricSetup)
             })
         }
         composable(Routes.BiometricSetup) {
-            val vm = sharedOnboardingVm(nav)
+            val vm = sharedOnboardingVm(nav) ?: return@composable
             val draft by vm.draft.collectAsStateWithLifecycle()
             BiometricSetupScreen(
                 initialEnabled = draft.biometricEnabled,
@@ -55,7 +55,7 @@ fun NavGraphBuilder.onboardingNavGraph(
             )
         }
         composable(Routes.ThreatPreset) {
-            val vm = sharedOnboardingVm(nav)
+            val vm = sharedOnboardingVm(nav) ?: return@composable
             val draft by vm.draft.collectAsStateWithLifecycle()
             ThreatPresetScreen(
                 initial = draft.threatPreset,
@@ -66,7 +66,7 @@ fun NavGraphBuilder.onboardingNavGraph(
             )
         }
         composable(Routes.LastPeriod) {
-            val vm = sharedOnboardingVm(nav)
+            val vm = sharedOnboardingVm(nav) ?: return@composable
             LastPeriodScreen(onFinish = {
                 vm.setLastPeriodStart(it)
                 vm.complete()
@@ -75,7 +75,7 @@ fun NavGraphBuilder.onboardingNavGraph(
         }
         composable(Routes.OnboardingCompleteRoute) {
             val vm = sharedOnboardingVm(nav)
-            val db by vm.completion.collectAsStateWithLifecycle()
+            val db = vm?.completion?.collectAsStateWithLifecycle()?.value
             LaunchedEffect(db) {
                 db?.let { onComplete(it) }
             }
@@ -87,9 +87,14 @@ fun NavGraphBuilder.onboardingNavGraph(
 /**
  * Share the OnboardingViewModel across the nav graph by scoping it to the
  * parent NavBackStackEntry (the "onboarding" route).
+ *
+ * Returns null while the onboarding subgraph is being popped (the moment
+ * after setUnlocked but before MainHost replaces the composition). Callers
+ * must handle null gracefully — the screen is about to be removed anyway.
  */
 @androidx.compose.runtime.Composable
-private fun sharedOnboardingVm(nav: NavHostController): OnboardingViewModel {
-    val parentEntry = nav.getBackStackEntry(Routes.Onboarding)
+private fun sharedOnboardingVm(nav: NavHostController): OnboardingViewModel? {
+    val parentEntry = runCatching { nav.getBackStackEntry(Routes.Onboarding) }
+        .getOrNull() ?: return null
     return androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = parentEntry)
 }

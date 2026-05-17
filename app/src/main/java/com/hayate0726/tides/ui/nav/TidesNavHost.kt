@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.hayate0726.tides.AppState
 import com.hayate0726.tides.AppViewModel
+import com.hayate0726.tides.ui.lock.LockHost
 
 /**
  * Root navigation host. Observes AppViewModel.state and routes between
@@ -59,21 +60,11 @@ fun TidesNavHost() {
         onboardingNavGraph(nav, onComplete = { db -> app.setUnlocked(db) })
 
         composable(Routes.Lock) {
-            // Minimal lock placeholder. Full LockScreen integration with
-            // LockManager + BiometricPrompt happens next.
-            PlaceholderScreen(
-                title = "Locked",
-                subtitle = "Lock screen wiring lands next.",
-            )
+            LockHost(appViewModel = app)
         }
 
         composable(Routes.Main) {
-            PlaceholderScreen(
-                title = "Tides",
-                subtitle = "Calendar / Log / Stats are built; nav-host wiring of the unlocked DB lands next.",
-                actionLabel = "Lock",
-                onAction = { app.lock() },
-            )
+            MainHost(appViewModel = app)
         }
     }
 }

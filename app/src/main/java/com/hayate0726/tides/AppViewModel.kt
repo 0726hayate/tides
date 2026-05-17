@@ -35,6 +35,16 @@ class AppViewModel @Inject constructor(
     private val _state = MutableStateFlow<AppState>(AppState.Loading)
     val state: StateFlow<AppState> = _state.asStateFlow()
 
+    /**
+     * Transient unlock error surfaced to the LockScreen. Cleared by the UI
+     * after display (call [clearUnlockError]) or implicitly when the user
+     * starts a new attempt.
+     */
+    private val _unlockError = MutableStateFlow<String?>(null)
+    val unlockError: StateFlow<String?> = _unlockError.asStateFlow()
+
+    fun clearUnlockError() { _unlockError.update { null } }
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             _state.value = if (authMetaFile.exists()) AppState.Locked else AppState.Onboarding
@@ -56,7 +66,7 @@ class AppViewModel @Inject constructor(
                         _state.update { AppState.Unlocked(db) }
                     }
                     LockManager.UnlockResult.WrongPin -> {
-                        // state unchanged; UI shows error
+                        _unlockError.update { "Wrong PIN" }
                     }
                     is LockManager.UnlockResult.RateLimited -> {
                         _state.update { AppState.LockedCooldown(result.expiryEpochMs) }
