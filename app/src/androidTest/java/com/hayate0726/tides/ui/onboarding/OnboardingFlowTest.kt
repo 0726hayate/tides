@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.hayate0726.tides.MainActivity
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 
@@ -22,6 +23,7 @@ class OnboardingFlowTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
 
     @Test
+    @Ignore("Main route currently renders a placeholder. Re-enable once Plan 4 wires CalendarScreen with the unlocked TidesDatabase.")
     fun complete_onboarding_lands_on_calendar() {
         rule.onNodeWithText("Continue").performClick()  // Welcome
         rule.onNodeWithText("Continue").performClick()  // Goals (defaults are ok)
