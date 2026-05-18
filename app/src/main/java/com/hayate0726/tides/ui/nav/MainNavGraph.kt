@@ -168,7 +168,7 @@ private fun CalendarRoute(db: TidesDatabase) {
             month = ui.month,
             today = ui.today,
             periodDays = periodDays,
-            ovulationWindow = null,
+            ovulationWindow = ui.ovulationWindow,
             predictedPeriod = null,
             symptomDays = ui.symptomDays,
         ),
