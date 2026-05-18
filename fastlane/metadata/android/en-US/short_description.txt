@@ -1,0 +1,1 @@
+Offline period tracker. No accounts, no network, no telemetry.

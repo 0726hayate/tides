@@ -21,10 +21,37 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    // Signing config is sourced entirely from environment variables. When the
+    // four env vars are set (GitHub Actions release workflow), assembleRelease
+    // produces a signed APK. When they're absent (F-Droid maintainer builds,
+    // local debugging) the release task still runs but emits an unsigned APK
+    // for downstream signing. No keystore is ever checked in.
+    val signingKeystorePath: String? = System.getenv("TIDES_SIGNING_KEYSTORE")
+    val signingKeystorePassword: String? = System.getenv("TIDES_SIGNING_STORE_PASSWORD")
+    val signingKeyAlias: String? = System.getenv("TIDES_SIGNING_KEY_ALIAS")
+    val signingKeyPassword: String? = System.getenv("TIDES_SIGNING_KEY_PASSWORD")
+    val hasSigningEnv = listOf(
+        signingKeystorePath, signingKeystorePassword, signingKeyAlias, signingKeyPassword
+    ).all { !it.isNullOrEmpty() }
+
+    signingConfigs {
+        if (hasSigningEnv) {
+            create("release") {
+                storeFile = file(signingKeystorePath!!)
+                storePassword = signingKeystorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (hasSigningEnv) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isMinifyEnabled = false

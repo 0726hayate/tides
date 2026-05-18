@@ -1,0 +1,7 @@
+First development build.
+
+Includes onboarding, PIN/biometric unlock, calendar logging, cycle
+statistics with FIGO-aligned descriptors, PDF/CSV export, encrypted
+backup, optional reminders, and a duress PIN.
+
+Tides has no INTERNET permission. All data stays on the device.

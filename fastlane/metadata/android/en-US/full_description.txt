@@ -1,0 +1,40 @@
+Tides is an offline-first period tracker designed for users who want
+their cycle data to stay on their device — no accounts, no analytics,
+no cloud sync.
+
+The app's manifest does not declare the INTERNET permission. Tides
+cannot make a network call even if a future bug tried to.
+
+What you get:
+
+* Calendar view with cycle day, period days, and fertile-window
+  indicators (color-blind-safe glyphs throughout).
+* Two-tap daily logging: flow intensity, symptoms from a curated
+  taxonomy, optional note.
+* Cycle and period statistics with FIGO-aligned regularity descriptors,
+  symptom heatmaps, and monthly insight cards built from your own data.
+* PDF and CSV export, including a doctor-formatted summary that follows
+  the FIGO System 1 menstrual descriptors used in clinical settings.
+* Encrypted backup and restore with a separate backup password.
+* Optional period reminders (off by default, scheduled locally — Tides
+  has no internet permission, so reminders run entirely on device).
+* PIN unlock with optional biometric. The encryption key is derived
+  from your PIN via Argon2id; biometric unlock unwraps a key bound
+  to the Android Keystore.
+* Optional duress PIN that opens a clean decoy database.
+
+Privacy and threat model:
+
+* All cycle data lives in a single SQLCipher-encrypted database.
+* No telemetry, no crash reporting, no analytics, no A/B testing,
+  no remote config. None of these are present in the build.
+* Three privacy presets at onboarding (Just for me, Locked when away,
+  Always locked) tune lock timeouts, notification visibility, and
+  duress-PIN availability.
+
+Tides is free software under GPL-3.0. There are no in-app purchases.
+A Ko-fi link is available in Settings for users who want to support
+development, but the app itself never asks for money.
+
+Source code and bug reports:
+https://github.com/hayate0726/tides

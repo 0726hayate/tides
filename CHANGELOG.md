@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added — Plan 4: Export, Notifications, Release
+- **Export (Wave 1).** `ui/export/CsvBuilder.kt`, `ui/export/PdfBuilder.kt` (US-Letter cycle summary), and `ui/export/DoctorPdfBuilder.kt` (FIGO-aligned, black-ink-only doctor PDF using the Android `PdfDocument` API — no third-party PDF dependency).
+- **Sharing (Wave 2).** `ui/export/Sharer.kt` wraps `Intent.ACTION_SEND` + a `FileProvider` (`xml/file_provider_paths.xml`, authority `${applicationId}.fileprovider`) so PDFs and CSVs hand off via the system share sheet without ever copying outside app-private cache.
+- **Feedback screen.** `ui/feedback/FeedbackScreen.kt` opens the GitHub Issues tracker or `mailto:0726hayate@gmail.com` via system Intents only — no in-app form, no network.
+- **Duress PIN setup.** `ui/settings/DuressSetupScreen.kt` + `DuressSetupViewModel.kt`. Rejects collisions with the primary PIN via `KeyDerivation.validatePin` before persisting.
+- **Encrypted backup (Wave 3).** `data/BackupExporter.kt` + `data/BackupImporter.kt` implement a real Tides container format: 4-byte `TBAK` magic + version + 16-byte key salt + 16-byte verifier salt + 32-byte Argon2id verifier + SQLCipher payload rekeyed under the backup password via `PRAGMA rekey`. Wrong passwords are rejected at the verifier (constant-time `MessageDigest.isEqual`) before any destination file is written. `ui/settings/BackupScreen.kt` exposes the export/import UI; round-trip tests cover correct password, wrong password, and non-Tides bytes.
+- **Notifications (Wave 4).** `notifications/` package: three opt-in reminder types per spec §5.12 (PERIOD_PREDICTED at -3 days, PERIOD_START on the predicted day, LATE_PERIOD at +3 days). All toggles default off. `ReminderScheduleCalculator` is pure Kotlin and unit-tested; `ReminderScheduler` arms `AlarmManager.setAndAllowWhileIdle` per type. Notification title and lock-screen visibility are baked into the `PendingIntent` extras at schedule time from the active `ThreatPreset` so the receiver works while the app is locked. `ui/settings/NotificationsScreen.kt` exposes three toggles and a system-permission rationale row.
+- **Release pipeline (Wave 5).** `app/build.gradle.kts` reads signing config exclusively from environment variables — no keystore is ever checked in, and F-Droid maintainer builds run unsigned for downstream signing. `.github/workflows/release.yml` triggers on `v*` tags, decodes a base64 keystore from a GitHub secret, runs the same `aapt2 dump permissions` audit as CI on the release APK, and posts the signed artifact to GitHub Releases.
+- **F-Droid metadata.** `fastlane/metadata/android/en-US/` directory with `title.txt`, `short_description.txt`, `full_description.txt`, and per-version changelogs.
+
+### Deferred to v1.1
+- Glance home-screen widget (spec §5.13). The widget needs an unencrypted `widget_summary.bin` on disk; the variant + threat-model design moves to a follow-up rather than landing a half-baked widget for v1.
+- Settings navigation: the per-feature screens (Notifications, Backup, Duress PIN, Feedback) ship as standalone composables but aren't yet wired into a Settings nav graph — `MainHost` is still Calendar-only. Lands alongside bottom navigation.
+
 ### Added — Plan 3: Core UI
 - Material 3 theme system under `ui/theme/`: CVD-safe color palette (`TidesColors`), 12 typography styles, Shapes, and the root `TidesTheme` composable. Light palette = cream + warm tones; dark = black + warm reds.
 - `ui/theme/Glyphs.kt`: shape primitives — `DropGlyph` (period), `DiamondGlyph` (ovulation), `DashedBar` (predicted period) — used by the calendar for shape-redundant marks readable under deuteranopia / protanopia / tritanopia.
