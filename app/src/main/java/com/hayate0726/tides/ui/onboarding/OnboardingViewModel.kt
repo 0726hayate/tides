@@ -35,7 +35,6 @@ class OnboardingViewModel @Inject constructor(
     @ApplicationContext private val ctx: Context,
     @CyclesDbFile private val dbFile: File,
     private val authMetaStore: FileAuthMetaStore,
-    private val biometricKeyStore: com.hayate0726.tides.crypto.BiometricKeyStore,
 ) : ViewModel() {
 
     data class DraftState(
@@ -117,12 +116,11 @@ class OnboardingViewModel @Inject constructor(
             )
 
             val db = DatabaseFactory.open(ctx, dbFile, key)
-            if (draft.biometricEnabled) {
-                // Silently no-op on devices without biometric hardware. The Settings
-                // toggle later can retry. We don't want onboarding to fail because the
-                // emulator/device lacks a fingerprint reader.
-                runCatching { biometricKeyStore.enroll(key) }
-            }
+            // Biometric enrollment requires a live BiometricPrompt session to authorize
+            // the Keystore cipher.init(ENCRYPT_MODE) op, and onboarding can't show one
+            // from a ViewModel context. The user's biometric_enabled choice is persisted
+            // below; actual enrollment happens via Settings -> Biometric unlock after
+            // onboarding completes.
             key.zero()
 
             // Seed the DB with onboarding choices

@@ -59,7 +59,8 @@ fun BiometricToggleScreen(
             Spacer(Modifier.size(12.dp))
             Button(
                 onClick = { onEnable(pin) },
-                enabled = pin.length >= 6 && status !is BiometricToggleViewModel.Status.Working,
+                enabled = pin.length >= 6 && status !is BiometricToggleViewModel.Status.Working
+                    && status !is BiometricToggleViewModel.Status.AwaitingBiometric,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Enable biometric unlock") }
         }
@@ -67,6 +68,7 @@ fun BiometricToggleScreen(
         Spacer(Modifier.size(16.dp))
         when (status) {
             BiometricToggleViewModel.Status.Working -> Text("Working…")
+            BiometricToggleViewModel.Status.AwaitingBiometric -> Text("Waiting for biometric…")
             BiometricToggleViewModel.Status.EnrolledOk -> Text("Biometric unlock enabled.")
             BiometricToggleViewModel.Status.DisabledOk -> Text("Biometric unlock disabled.")
             is BiometricToggleViewModel.Status.Error -> Text(
@@ -74,7 +76,9 @@ fun BiometricToggleScreen(
             )
             BiometricToggleViewModel.Status.Idle -> {}
         }
-        if (status != BiometricToggleViewModel.Status.Idle) {
+        if (status != BiometricToggleViewModel.Status.Idle &&
+            status != BiometricToggleViewModel.Status.Working &&
+            status != BiometricToggleViewModel.Status.AwaitingBiometric) {
             Spacer(Modifier.size(8.dp))
             OutlinedButton(onClick = onDismissStatus, modifier = Modifier.fillMaxWidth()) {
                 Text("Clear")

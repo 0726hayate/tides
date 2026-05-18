@@ -493,12 +493,31 @@ private fun BiometricRoute(nav: NavHostController) {
     )
     val enrolled by vm.enrolled.collectAsStateWithLifecycle()
     val status by vm.status.collectAsStateWithLifecycle()
+
+    val activity = ctx as? androidx.fragment.app.FragmentActivity
+    LaunchedEffect(status) {
+        if (status == BiometricToggleViewModel.Status.AwaitingBiometric) {
+            if (activity == null) {
+                vm.cancelPending("This screen needs a FragmentActivity to show the biometric prompt.")
+                return@LaunchedEffect
+            }
+            com.hayate0726.tides.ui.lock.BiometricController.authenticate(
+                activity = activity,
+                title = "Enable biometric unlock",
+                subtitle = "Confirm your biometric to wrap your encryption key.",
+                negativeButton = "Cancel",
+                onSuccess = { vm.completeEnroll() },
+                onError = { msg -> vm.cancelPending(msg) },
+            )
+        }
+    }
+
     SubScreenScaffold("Biometric unlock", nav) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
+        androidx.compose.foundation.layout.Box(modifier = Modifier.padding(padding)) {
             BiometricToggleScreen(
                 enrolled = enrolled,
                 status = status,
-                onEnable = vm::enable,
+                onEnable = vm::prepare,
                 onDisable = vm::disable,
                 onDismissStatus = vm::clearStatus,
             )
@@ -515,7 +534,7 @@ private fun BirthControlRoute(db: TidesDatabase, nav: NavHostController) {
     val vm: BirthControlViewModel = viewModel(
         key = "bc-${System.identityHashCode(db)}",
         factory = simpleFactory {
-            BirthControlViewModel(db, ep.userPrivacyRepository())
+            BirthControlViewModel(db, ep.userPrivacyRepository(), ep.widgetUpdater())
         },
     )
     val s by vm.state.collectAsStateWithLifecycle()
