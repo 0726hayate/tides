@@ -96,7 +96,7 @@ fun MainScaffold(appViewModel: AppViewModel, db: TidesDatabase) {
             composable(Routes.Stats) { StatsRoute(db) }
             composable(Routes.Settings) { SettingsRoute(appViewModel, db, nav) }
             composable(Routes.SettingsNotifications) { NotificationsRoute(db) }
-            composable(Routes.SettingsBackup) { BackupRoute() }
+            composable(Routes.SettingsBackup) { BackupRoute(appViewModel) }
             composable(Routes.SettingsDuress) { DuressRoute(nav) }
             composable(Routes.SettingsThreatPreset) { ThreatPresetRoute(db, nav) }
             composable(Routes.SettingsFeedback) { FeedbackScreen() }
@@ -288,7 +288,7 @@ private fun NotificationsRoute(db: TidesDatabase) {
 }
 
 @Composable
-private fun BackupRoute() {
+private fun BackupRoute(appViewModel: AppViewModel) {
     val ctx = LocalContext.current
     val ep = remember {
         EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
@@ -299,6 +299,7 @@ private fun BackupRoute() {
                 ctx = ctx.applicationContext,
                 authMetaStore = ep.authMetaStore(),
                 dbFile = ep.cyclesDbFile(),
+                appViewModel = appViewModel,
             )
         },
     )
@@ -307,7 +308,7 @@ private fun BackupRoute() {
         status = status,
         onExport = vm::export,
         onShare = vm::share,
-        onImport = vm::importNotYetWired,
+        onRestore = vm::restore,
         onDismissStatus = vm::clearStatus,
     )
 }

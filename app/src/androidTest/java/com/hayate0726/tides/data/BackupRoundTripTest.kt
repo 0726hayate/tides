@@ -84,6 +84,60 @@ class BackupRoundTripTest {
     }
 
     @Test
+    fun import_then_rekey_to_primary_yields_a_db_unlockable_by_primary_key() = runBlocking {
+        val ctx: Context = ApplicationProvider.getApplicationContext()
+        val srcFile = File(ctx.filesDir, "src_restore.db")
+        val bakFile = File(ctx.filesDir, "backup_restore.tides")
+        val payloadFile = File(ctx.filesDir, "payload_restore.db")
+        listOf(srcFile, bakFile, payloadFile).forEach { it.delete() }
+
+        // Source DB encrypted with the user's primary key.
+        val primaryKey = KeyDerivation.deriveKey(Pin("111111".toCharArray()), ByteArray(16) { 7 })
+        DatabaseFactory.open(ctx, srcFile, primaryKey).also {
+            it.cycleEntryDao().upsert(
+                CycleEntryEntity(LocalDate.parse("2026-04-15"), FlowIntensity.HEAVY, null, "before")
+            )
+            it.close()
+        }
+
+        BackupExporter.export(ctx, srcFile, primaryKey, "off-device-pw".toCharArray(), bakFile)
+
+        // Importer extracts the payload (still encrypted under backup key).
+        val backupKey = BackupImporter.import(
+            ctx, bakFile, "off-device-pw".toCharArray(), payloadFile,
+        )
+        try {
+            // Rekey payload from backup key to primary key.
+            System.loadLibrary("sqlcipher")
+            val backupPwd = backupKey.bytes.copyOf()
+            try {
+                val db = net.zetetic.database.sqlcipher.SQLiteDatabase
+                    .openOrCreateDatabase(payloadFile, backupPwd, null, null)
+                try {
+                    val hex = primaryKey.bytes.joinToString("") { "%02x".format(it) }
+                    db.rawExecSQL("PRAGMA rekey = \"x'$hex'\"")
+                } finally {
+                    db.close()
+                }
+            } finally {
+                java.util.Arrays.fill(backupPwd, 0)
+            }
+        } finally {
+            backupKey.zero()
+        }
+
+        // The rekeyed payload should now open with the primary key.
+        val restored = DatabaseFactory.open(ctx, payloadFile, primaryKey)
+        val rows = restored.cycleEntryDao().all()
+        assertEquals(1, rows.size)
+        assertEquals("before", rows[0].notes)
+        restored.close()
+        primaryKey.zero()
+
+        listOf(srcFile, bakFile, payloadFile).forEach { it.delete() }
+    }
+
+    @Test
     fun import_rejects_non_tides_file() = runBlocking {
         val ctx: Context = ApplicationProvider.getApplicationContext()
         val bakFile = File(ctx.filesDir, "junk.tides")

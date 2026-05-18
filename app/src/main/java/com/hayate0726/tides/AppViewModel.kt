@@ -141,6 +141,46 @@ class AppViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Atomically replace the live database file with [newDbFile], close any
+     * currently-open DB handle, and force the user back through the lock
+     * screen. Called from [com.hayate0726.tides.ui.settings.BackupViewModel]
+     * after a backup has been verified and rekeyed to the active primary key.
+     *
+     * The mutex serializes against any concurrent unlock attempt — without
+     * it, an in-flight openAndUnlock() could open the half-moved file or the
+     * old one and leak that handle.
+     *
+     * Returns true on success. On move failure, the existing DB is left
+     * untouched and the user remains unlocked.
+     */
+    suspend fun replaceDatabaseFile(newDbFile: File): Boolean {
+        return stateMutex.withLock {
+            closeCurrentDb()
+            try {
+                java.nio.file.Files.move(
+                    newDbFile.toPath(),
+                    dbFile.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                )
+            } catch (e: java.nio.file.AtomicMoveNotSupportedException) {
+                // Fall back to a non-atomic copy + delete on filesystems where
+                // ATOMIC_MOVE isn't supported (rare on Android internal storage).
+                java.nio.file.Files.copy(
+                    newDbFile.toPath(),
+                    dbFile.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                )
+                newDbFile.delete()
+            } catch (e: Exception) {
+                return@withLock false
+            }
+            _state.value = AppState.Locked
+            true
+        }
+    }
+
     /** Called by OnboardingViewModel once auth_meta.bin and the DB exist. */
     fun setUnlocked(db: TidesDatabase) {
         viewModelScope.launch(Dispatchers.IO) {
