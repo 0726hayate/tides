@@ -197,21 +197,98 @@ private fun cycleDayFor(date: java.time.LocalDate, cycles: List<com.hayate0726.t
 
 @Composable
 private fun StatsRoute(db: TidesDatabase) {
+    val ctx = LocalContext.current
     val vm: StatsViewModel = viewModel(
         key = "stats-${System.identityHashCode(db)}",
         factory = simpleFactory { StatsViewModel(db) },
     )
     val ui by vm.state.collectAsStateWithLifecycle()
+    val range by vm.range.collectAsStateWithLifecycle()
     val state = ui
     if (state == null) {
         Text("Loading…", modifier = Modifier.padding(24.dp))
         return
     }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     StatsScreen(
         state = state,
+        range = range,
+        onRangeChange = vm::setRange,
         onDismissInsight = vm::dismissInsight,
-        onExportPdf = { /* PDF share wiring lands with bottom-bar action */ },
-        onExportCsv = { /* CSV share wiring lands with bottom-bar action */ },
+        onExportPdf = {
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                shareDoctorPdf(ctx.applicationContext, db, range)
+            }
+        },
+        onExportCsv = {
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                shareCsvExport(ctx.applicationContext, db, range)
+            }
+        },
+    )
+}
+
+private suspend fun shareDoctorPdf(
+    appCtx: android.content.Context,
+    db: TidesDatabase,
+    range: StatsViewModel.Range,
+) {
+    val to = java.time.LocalDate.now()
+    val from = range.months?.let { to.minusMonths(it.toLong()) } ?: java.time.LocalDate.of(2000, 1, 1)
+    val entries = db.cycleEntryDao().rangeOnce(from, to)
+    val cycles = com.hayate0726.tides.domain.CycleDetector.detect(
+        entries.map { com.hayate0726.tides.domain.CycleDetector.Entry(it.date, it.flowIntensity) }
+    )
+    val cycleStats = com.hayate0726.tides.domain.CycleStats.compute(cycles)
+    val flowEntries = entries.map {
+        com.hayate0726.tides.domain.FigoAnalysis.FlowEntry(it.date, it.flowIntensity)
+    }
+    val figo = com.hayate0726.tides.domain.FigoAnalysis.analyze(
+        cycles = cycles,
+        cycleFlowEntries = flowEntries,
+        painEntries = emptyList(),
+        intermenstrualBleedingDates = emptyList(),
+        today = to,
+    )
+    val bytes = java.io.ByteArrayOutputStream().also {
+        com.hayate0726.tides.ui.export.DoctorPdfBuilder.build(
+            cycles = cycles,
+            stats = cycleStats,
+            figoPatterns = figo,
+            userName = null,
+            userDob = null,
+            rangeStart = from,
+            rangeEnd = to,
+            appVersion = "0.1.0",
+            output = it,
+        )
+    }.toByteArray()
+    com.hayate0726.tides.ui.export.Sharer.sharePdf(
+        appCtx, bytes,
+        displayName = "tides-cycle-summary-${java.time.LocalDate.now()}.pdf",
+    )
+}
+
+private suspend fun shareCsvExport(
+    appCtx: android.content.Context,
+    db: TidesDatabase,
+    range: StatsViewModel.Range,
+) {
+    val to = java.time.LocalDate.now()
+    val from = range.months?.let { to.minusMonths(it.toLong()) } ?: java.time.LocalDate.of(2000, 1, 1)
+    val entries = db.cycleEntryDao().rangeOnce(from, to)
+    val cycles = com.hayate0726.tides.domain.CycleDetector.detect(
+        entries.map { com.hayate0726.tides.domain.CycleDetector.Entry(it.date, it.flowIntensity) }
+    )
+    val symptomRows = db.symptomEntryDao().rangeOnce(from, to)
+    val symptomsByDate: Map<java.time.LocalDate, List<com.hayate0726.tides.domain.model.Symptom>> =
+        symptomRows.groupBy({ it.date }, { it.symptom })
+    val notesByDate: Map<java.time.LocalDate, String> =
+        entries.mapNotNull { e -> e.notes?.let { n -> e.date to n } }.toMap()
+    val csv = com.hayate0726.tides.ui.export.CsvBuilder.build(cycles, symptomsByDate, notesByDate)
+    com.hayate0726.tides.ui.export.Sharer.shareCsv(
+        appCtx, csv,
+        displayName = "tides-export-${java.time.LocalDate.now()}.csv",
     )
 }
 
