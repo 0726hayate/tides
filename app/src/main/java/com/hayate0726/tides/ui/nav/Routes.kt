@@ -17,4 +17,10 @@ object Routes {
     const val Calendar = "main/calendar"
     const val Stats = "main/stats"
     const val Settings = "main/settings"
+
+    const val SettingsNotifications = "main/settings/notifications"
+    const val SettingsBackup = "main/settings/backup"
+    const val SettingsDuress = "main/settings/duress"
+    const val SettingsThreatPreset = "main/settings/threat_preset"
+    const val SettingsFeedback = "main/settings/feedback"
 }

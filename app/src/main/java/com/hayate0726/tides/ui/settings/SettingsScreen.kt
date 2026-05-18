@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -18,18 +20,35 @@ import androidx.compose.ui.unit.dp
 fun SettingsScreen(
     threatPresetLabel: String,
     onChangePreset: () -> Unit,
+    onNotifications: () -> Unit,
+    onBackup: () -> Unit,
+    onDuress: () -> Unit,
+    duressAvailable: Boolean,
     onCheckUpdates: () -> Unit,
     onSendFeedback: () -> Unit,
     onSupportDevelopment: () -> Unit,
     onLock: () -> Unit,
+    appStateIsUnlocked: Boolean,
 ) {
-    Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+    ) {
         Text("Settings", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.size(24.dp))
 
         SettingsSectionHeader("Privacy")
         SettingsRow("Privacy preset", value = threatPresetLabel, onClick = onChangePreset)
-        SettingsRow("Lock now", onClick = onLock)
+        if (duressAvailable) {
+            SettingsRow("Duress PIN", onClick = onDuress)
+        }
+        if (appStateIsUnlocked) {
+            SettingsRow("Lock now", onClick = onLock)
+        }
+
+        Spacer(Modifier.size(20.dp))
+        SettingsSectionHeader("Data")
+        SettingsRow("Reminders", onClick = onNotifications)
+        SettingsRow("Backup & restore", onClick = onBackup)
 
         Spacer(Modifier.size(20.dp))
         SettingsSectionHeader("About")
@@ -54,8 +73,11 @@ private fun SettingsRow(label: String, value: String? = null, onClick: () -> Uni
     Column(modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(vertical = 14.dp)) {
         Text(label, style = MaterialTheme.typography.bodyLarge)
         if (value != null) {
-            Text(value, style = MaterialTheme.typography.bodySmall,
-                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                value,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.surface)
