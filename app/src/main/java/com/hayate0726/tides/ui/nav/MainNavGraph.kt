@@ -246,7 +246,9 @@ private suspend fun shareDoctorPdf(
     val figo = com.hayate0726.tides.domain.FigoAnalysis.analyze(
         cycles = cycles,
         cycleFlowEntries = flowEntries,
-        painEntries = emptyList(),
+        painEntries = entries.mapNotNull { e ->
+            e.painSeverity?.let { com.hayate0726.tides.domain.FigoAnalysis.PainEntry(e.date, it) }
+        },
         intermenstrualBleedingDates = emptyList(),
         today = to,
     )
