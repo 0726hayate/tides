@@ -2,7 +2,7 @@
 
 **Status:** Draft for implementation
 **Date:** 2026-05-18
-**Goal:** Catch edge-case bugs in Tides' prediction, suppression, and stats logic that pure-unit tests miss, by running the app against ~18 realistic user personas drawn from published cycle research and clinical case reports.
+**Goal:** Catch edge-case bugs in Tides' prediction, suppression, and stats logic that pure-unit tests miss, by running the app against 21 realistic user personas drawn from published cycle research and clinical case reports. Hormonal IUD coverage is deliberately deep because it has the most distinct usage states (adjustment / amenorrhea / breakthrough spotting / low-dose) and requires the strongest privacy guarantees (ovulation suppression hard ON regardless of cycle appearance).
 
 ## 1. Motivation
 
@@ -12,10 +12,10 @@ Tides' domain logic (`PhaseCalculator`, `CyclePredictor`, `CycleDetector`, `Figo
 
 A permanent instrumented test module in `app/src/androidTest/java/com/hayate0726/tides/validation/` that:
 
-- Defines 18 personas (12 generated from published distributions, 6 hand-transcribed from clinical case reports).
+- Defines 21 personas (13 generated from published distributions, 8 hand-transcribed from clinical case reports).
 - Runs each persona through the full app stack (DB → DAO → Repository → ViewModel → snapshot).
-- Asserts 6 behavioral properties per persona, plus 3 widget-binary snapshot tests.
-- Runs on emulator via `connectedDebugAndroidTest`; runtime ~6 minutes.
+- Asserts 6 universal behavioral properties per persona, plus 2 hormonal-IUD-conditional properties, plus 4 widget-binary snapshot tests.
+- Runs on emulator via `connectedDebugAndroidTest`; runtime ~7 minutes.
 
 Personas and assertions are deterministic — seeded RNG, fixed snapshot fixtures. CI failures are reproducible from a persona id + seed alone.
 
@@ -29,7 +29,7 @@ Rejected alternatives:
 
 ## 4. Persona catalog
 
-Eighteen personas across four population groups:
+Twenty-one personas across five groups (Group 4 expanded for hormonal-IUD depth):
 
 ### Group 1 — Typical adult (3)
 | Id | Age | Cycle | Period | History | BC | Goals |
@@ -52,14 +52,19 @@ Eighteen personas across four population groups:
 | `BC_STOPPED_3MO` | 27 | 12mo combined-pill clockwork → 3mo 32-45d cycles | none (stopped) | TTC |
 | `BC_STARTED_6MO` | 24 | 12mo natural 28-31d → 6mo combined-pill withdrawal bleeds | COMBINED_PILL | none |
 
-### Group 4 — Special (3)
+### Group 4 — Special (6, 4 of which are hormonal-IUD variants)
 | Id | Age | History detail | BC | Goals |
 |---|---|---|---|---|
-| `HORMONAL_IUD_MIRENA` | 33 | 18mo on Mirena, 0-2 bleed events per 6mo, breakthrough spotting | HORMONAL_IUD | TRACK_CYCLE |
-| `COPPER_IUD` | 29 | 18mo on copper IUD, regular 28d cycles, heavier 6-7d periods | COPPER_IUD | TTC |
+| `HORMONAL_IUD_ADJUSTMENT` | 28 | 3mo since insertion, heavy irregular spotting ~15-20 events at random intervals, LIGHT–MEDIUM flow | HORMONAL_IUD | TRACK_CYCLE |
+| `HORMONAL_IUD_AMENORRHEA` | 33 | 18mo on Mirena, zero bleeding events logged (complete amenorrhea); only goals + BC entries present | HORMONAL_IUD | TRACK_CYCLE |
+| `HORMONAL_IUD_SPOTTING_STEADY` | 31 | 12mo on Mirena, 4–12 sparse breakthrough spotting events per year, gaps 30–90d, all LIGHT flow | HORMONAL_IUD | TRACK_CYCLE |
+| `HORMONAL_IUD_LOW_DOSE` | 27 | 12mo on a Kyleena-like low-dose hormonal IUD, regular-ish 26–35d cycles, LIGHT flow throughout | HORMONAL_IUD | TTC |
+| `COPPER_IUD` | 29 | 18mo on copper IUD, regular 28d cycles, heavier 6–7d periods | COPPER_IUD | TTC |
 | `ATHLETE_AMENORRHEA` | 24 | 3-4 cycles over 18mo, gaps 90-160d | none | TRACK_CYCLE |
 
-### Group 5 — Clinical case reports (6, hand-transcribed)
+The `HORMONAL_IUD_LOW_DOSE` persona is the sharpest test of the privacy gate: cycles *look* regular enough that a naive system might surface ovulation predictions, but `BirthControlMethod.HORMONAL_IUD.isHormonal == true` must hard-suppress them.
+
+### Group 5 — Clinical case reports (8, hand-transcribed)
 
 Sourced from public medical case reports during research phase; each transcription carries a citation comment block referencing the journal. Target distribution:
 
@@ -69,6 +74,8 @@ Sourced from public medical case reports during research phase; each transcripti
 - `CASE_PILL_DISCONTINUATION` — post-pill cycle return pattern
 - `CASE_ANOVULATORY` — chronic anovulation case
 - `CASE_IUD_BREAKTHROUGH` — hormonal-IUD breakthrough bleeding pattern
+- `CASE_IUD_AMENORRHEA` — hormonal-IUD complete amenorrhea (published case)
+- `CASE_IUD_EXPULSION_RETURN` — hormonal-IUD partial expulsion → bleeding suddenly returns
 
 Exact case selection happens during the research phase (commit 1); fallbacks if a fitting case isn't found: pull from textbook clinical examples (ACOG Practice Bulletins) which are also citable.
 
@@ -162,7 +169,7 @@ data class Persona(
 
 ```kotlin
 object CaseReportPersonas {
-    val all: List<Persona> = listOf(/* 6 hand-built Persona instances */)
+    val all: List<Persona> = listOf(/* 8 hand-built Persona instances */)
 }
 ```
 
@@ -186,7 +193,7 @@ Opens ephemeral in-memory test DB with a fixed key, wires `UserPrivacyRepository
 
 ## 7. Tests
 
-### 7.1 `PersonaScenarioTest.kt` — 6 property assertions × 18 personas
+### 7.1 `PersonaScenarioTest.kt` — 6 universal + 2 IUD-conditional assertions × 21 personas
 
 ```kotlin
 @RunWith(Parameterized::class)
@@ -194,12 +201,17 @@ Opens ephemeral in-memory test DB with a fixed key, wires `UserPrivacyRepository
 class PersonaScenarioTest(private val persona: Persona) {
     @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
 
+    // Universal — every persona
     @Test fun ovulation_gate_respects_bc_and_goals()
     @Test fun cycle_detection_does_not_merge_distant_cycles()
     @Test fun prediction_confidence_drops_with_variability()
     @Test fun stats_handles_history_without_crash()
     @Test fun widget_summary_matches_privacy_gate()
     @Test fun figo_flags_pattern_for_known_disorders()
+
+    // Hormonal-IUD-conditional — gated on persona.birthControl?.method == HORMONAL_IUD
+    @Test fun hormonal_iud_spotting_does_not_seed_short_cycles()
+    @Test fun hormonal_iud_empty_history_renders_without_crash()
 
     companion object {
         @JvmStatic
@@ -209,7 +221,9 @@ class PersonaScenarioTest(private val persona: Persona) {
 }
 ```
 
-**The six properties:**
+The IUD-conditional tests use `org.junit.Assume.assumeTrue(persona.birthControl?.method == BirthControlMethod.HORMONAL_IUD)` so they're skipped (not failed) for non-IUD personas. JUnit's parameterized runner reports skipped tests separately so the noise is bounded.
+
+**The six universal properties:**
 
 1. **Ovulation gate:** `UserPrivacyView.compute(persona.goals, persona.birthControl?.method).showOvulation` equals the expected value for the persona's `populationSegment`. Hormonal BC ⇒ always false; goals without OVULATION_RELEVANT ⇒ always false; otherwise true.
 
@@ -223,17 +237,23 @@ class PersonaScenarioTest(private val persona: Persona) {
 
 6. **FIGO patterns (segment-conditional):** PCOS personas MUST flag `OLIGOMENORRHEA`. Perimenopause personas MAY flag `OLIGOMENORRHEA` or `HEAVY_MENSTRUAL_BLEEDING`. Athlete-amenorrhea persona MUST flag `AMENORRHEA`. Typical-adult personas MUST NOT flag any abnormality.
 
+**Hormonal-IUD-conditional properties (skip non-IUD personas):**
+
+7. **Spotting does not seed short cycles:** for any hormonal-IUD persona, `CycleRepository.detectCycles(...)` must not return any cycle whose `length` is less than 14 days. Hormonal-IUD spotting events get logged as bleeding entries but should not be combined into implausibly short "cycles" by the detector — that's the only sensible interpretation when the user is on a known ovulation-suppressing method.
+
+8. **Empty-history resilience:** for `HORMONAL_IUD_AMENORRHEA` and `CASE_IUD_AMENORRHEA`, asserts that `CyclePredictor.predictNextPeriod(...)` returns `null`, `StatsViewModel.refresh()` for every `Range` produces a populated (empty) state within 2 seconds and never throws, and the persisted widget snapshot has `predictedPeriodStartEpochDay == null` and `showOvulation == false`.
+
 Failure messages always include persona id + seed for repro.
 
-### 7.2 `PersonaSnapshotTest.kt` — 3 byte-exact widget snapshots
+### 7.2 `PersonaSnapshotTest.kt` — 4 byte-exact widget snapshots
 
-Captures the persisted `widget_summary.bin` file bytes for `TYPICAL_25`, `PCOS_LONG`, `HORMONAL_IUD_MIRENA`. Asserts byte-exact match against fixtures in `app/src/androidTest/assets/persona-snapshots/<id>.bin`. Locks the widget binary format so any change is intentional. Regenerating a snapshot is a documented one-line operation (see README).
+Captures the persisted `widget_summary.bin` file bytes for `TYPICAL_25`, `PCOS_LONG`, `HORMONAL_IUD_AMENORRHEA`, `HORMONAL_IUD_LOW_DOSE`. Asserts byte-exact match against fixtures in `app/src/androidTest/assets/persona-snapshots/<id>.bin`. The two IUD snapshots lock down the most security-relevant widget states: empty-history (no fields exposed) and regular-looking-cycles-on-hormonal-BC (ovulation flag must stay false). Regenerating a snapshot is a documented one-line operation (see README).
 
 ## 8. Build / CI integration
 
 - New source package only; no new Gradle dependencies. Uses existing `androidx.test`, JUnit 4, Hilt testing, Room/SQLCipher.
 - Run target: `./gradlew :app:connectedDebugAndroidTest`.
-- Total runtime estimate: 18 personas × 6 property tests × ~3s warm-emulator overhead ≈ 6 minutes. Acceptable for nightly CI; tight for every-PR if PR builds become emulator-backed.
+- Total runtime estimate: 21 personas × (6 universal + 2 IUD-conditional with ~4 actually-running) ≈ 130 test cases × ~3s warm-emulator overhead ≈ 7 minutes. Acceptable for nightly CI; tight for every-PR if PR builds become emulator-backed.
 - Documentation:
   - `docs/superpowers/specs/research/2026-05-18-cycle-distributions.md` — research output, referenced by `PersonaCatalog` parameter choices.
   - `app/src/androidTest/java/com/hayate0726/tides/validation/README.md` — how to add a new persona, how to regenerate a snapshot fixture.
@@ -242,8 +262,8 @@ Captures the persisted `widget_summary.bin` file bytes for `TYPICAL_25`, `PCOS_L
 
 1. **`docs(validation): cycle distribution research + clinical case sources`** — research doc + case-report sources surfaced. No code yet.
 2. **`feat(validation): PersonaGenerator + persona catalog`** — `PersonaSpec`, `PersonaGenerator`, `SyntheticPersonas` (12), `CaseReportPersonas` (6), `AllPersonas`. Compiles, no tests.
-3. **`test(validation): persona scenario suite (6 property assertions × 18 personas)`** — `PersonaTestHarness`, `PersonaScenarioTest` with all six property assertions.
-4. **`test(validation): widget snapshot fixtures + PersonaSnapshotTest`** — 3 fixture bytes + `PersonaSnapshotTest`; README.
+3. **`test(validation): persona scenario suite (6 universal + 2 IUD-conditional × 21 personas)`** — `PersonaTestHarness`, `PersonaScenarioTest` with all eight property assertions.
+4. **`test(validation): widget snapshot fixtures + PersonaSnapshotTest`** — 4 fixture bytes (typical + PCOS + IUD-amenorrhea + IUD-low-dose) + `PersonaSnapshotTest`; README.
 
 ## 10. Non-goals
 
