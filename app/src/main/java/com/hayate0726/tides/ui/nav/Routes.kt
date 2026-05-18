@@ -25,4 +25,5 @@ object Routes {
     const val SettingsFeedback = "main/settings/feedback"
     const val SettingsBiometric = "main/settings/biometric"
     const val SettingsBirthControl = "main/settings/birth_control"
+    const val SettingsAppearance = "main/settings/appearance"
 }

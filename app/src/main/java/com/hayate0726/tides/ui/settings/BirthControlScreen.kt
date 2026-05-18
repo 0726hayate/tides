@@ -25,8 +25,6 @@ fun BirthControlScreen(
     onSave: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        Text("Birth control", style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.size(8.dp))
         Text(
             "Used only to tailor the fertile-window display. Tides never sends this data anywhere.",
             style = MaterialTheme.typography.bodySmall,

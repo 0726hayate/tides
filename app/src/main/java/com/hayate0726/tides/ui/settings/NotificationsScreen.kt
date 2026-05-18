@@ -29,8 +29,6 @@ fun NotificationsScreen(
     onOpenSystemSettings: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        Text("Reminders", style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.size(8.dp))
         Text(
             "All reminders are off by default and run only on this device. " +
                 "Tides has no internet permission.",

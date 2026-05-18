@@ -51,8 +51,6 @@ fun BackupScreen(
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
     ) {
-        Text("Backup & restore", style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.size(8.dp))
         Text(
             "Backups are encrypted with a separate password and stay on your " +
                 "device until you share them.",

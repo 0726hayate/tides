@@ -33,8 +33,6 @@ fun DuressSetupScreen(
     val valid = pin.length >= 6 && pin == confirm
 
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        Text("Duress PIN", style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.size(8.dp))
         Text(
             "Optional. A second PIN that opens a fake or empty app — for when you can't refuse to unlock.",
             style = MaterialTheme.typography.bodyMedium,

@@ -2,6 +2,8 @@
 
 package com.hayate0726.tides.ui.nav
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -32,6 +34,10 @@ import com.hayate0726.tides.ui.feedback.FeedbackScreen
 import com.hayate0726.tides.ui.log.LogBottomSheet
 import com.hayate0726.tides.ui.log.LogViewModel
 import com.hayate0726.tides.ui.onboarding.ThreatPresetScreen
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import com.hayate0726.tides.ui.settings.AppearanceRepository
+import com.hayate0726.tides.ui.settings.AppearanceScreen
 import com.hayate0726.tides.ui.settings.BackupScreen
 import com.hayate0726.tides.ui.settings.BackupViewModel
 import com.hayate0726.tides.ui.settings.BiometricToggleScreen
@@ -99,13 +105,20 @@ fun MainScaffold(appViewModel: AppViewModel, db: TidesDatabase) {
             composable(Routes.Calendar) { CalendarRoute(db) }
             composable(Routes.Stats) { StatsRoute(db) }
             composable(Routes.Settings) { SettingsRoute(appViewModel, db, nav) }
-            composable(Routes.SettingsNotifications) { NotificationsRoute(db) }
-            composable(Routes.SettingsBackup) { BackupRoute(appViewModel) }
+            composable(Routes.SettingsNotifications) { NotificationsRoute(db, nav) }
+            composable(Routes.SettingsBackup) { BackupRoute(appViewModel, nav) }
             composable(Routes.SettingsDuress) { DuressRoute(nav) }
             composable(Routes.SettingsThreatPreset) { ThreatPresetRoute(db, nav) }
-            composable(Routes.SettingsFeedback) { FeedbackScreen() }
-            composable(Routes.SettingsBiometric) { BiometricRoute() }
-            composable(Routes.SettingsBirthControl) { BirthControlRoute(db) }
+            composable(Routes.SettingsFeedback) {
+                SubScreenScaffold("Send feedback", nav) { p ->
+                    Box(modifier = Modifier.padding(p)) {
+                        FeedbackScreen()
+                    }
+                }
+            }
+            composable(Routes.SettingsBiometric) { BiometricRoute(nav) }
+            composable(Routes.SettingsBirthControl) { BirthControlRoute(db, nav) }
+            composable(Routes.SettingsAppearance) { AppearanceRoute(nav) }
         }
     }
 }
@@ -344,11 +357,12 @@ private fun SettingsRoute(appViewModel: AppViewModel, db: TidesDatabase, nav: Na
         appStateIsUnlocked = appState is AppState.Unlocked || appState is AppState.UnlockedDecoy,
         onBiometric = { nav.navigate(Routes.SettingsBiometric) },
         onBirthControl = { nav.navigate(Routes.SettingsBirthControl) },
+        onAppearance = { nav.navigate(Routes.SettingsAppearance) },
     )
 }
 
 @Composable
-private fun NotificationsRoute(db: TidesDatabase) {
+private fun NotificationsRoute(db: TidesDatabase, nav: NavHostController) {
     val ctx = LocalContext.current
     val ep = remember {
         EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
@@ -366,27 +380,31 @@ private fun NotificationsRoute(db: TidesDatabase) {
     )
     LaunchedEffect(Unit) { vm.refreshSystemPermission() }
     val s by vm.state.collectAsStateWithLifecycle()
-    NotificationsScreen(
-        periodPredictedEnabled = s.periodPredictedEnabled,
-        periodStartEnabled = s.periodStartEnabled,
-        latePeriodEnabled = s.latePeriodEnabled,
-        systemNotificationsEnabled = s.systemNotificationsEnabled,
-        onTogglePredicted = vm::togglePredicted,
-        onToggleStart = vm::toggleStart,
-        onToggleLate = vm::toggleLate,
-        onOpenSystemSettings = {
-            val intent = android.content.Intent(
-                android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS,
-            ).apply {
-                putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName)
-            }
-            ctx.startActivity(intent)
-        },
-    )
+    SubScreenScaffold("Reminders", nav) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            NotificationsScreen(
+                periodPredictedEnabled = s.periodPredictedEnabled,
+                periodStartEnabled = s.periodStartEnabled,
+                latePeriodEnabled = s.latePeriodEnabled,
+                systemNotificationsEnabled = s.systemNotificationsEnabled,
+                onTogglePredicted = vm::togglePredicted,
+                onToggleStart = vm::toggleStart,
+                onToggleLate = vm::toggleLate,
+                onOpenSystemSettings = {
+                    val intent = android.content.Intent(
+                        android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS,
+                    ).apply {
+                        putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                    }
+                    ctx.startActivity(intent)
+                },
+            )
+        }
+    }
 }
 
 @Composable
-private fun BackupRoute(appViewModel: AppViewModel) {
+private fun BackupRoute(appViewModel: AppViewModel, nav: NavHostController) {
     val ctx = LocalContext.current
     val ep = remember {
         EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
@@ -402,20 +420,28 @@ private fun BackupRoute(appViewModel: AppViewModel) {
         },
     )
     val status by vm.status.collectAsStateWithLifecycle()
-    BackupScreen(
-        status = status,
-        onExport = vm::export,
-        onShare = vm::share,
-        onRestore = vm::restore,
-        onDismissStatus = vm::clearStatus,
-    )
+    SubScreenScaffold("Backup & restore", nav) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            BackupScreen(
+                status = status,
+                onExport = vm::export,
+                onShare = vm::share,
+                onRestore = vm::restore,
+                onDismissStatus = vm::clearStatus,
+            )
+        }
+    }
 }
 
 @Composable
 private fun DuressRoute(nav: NavHostController) {
     val vm: DuressSetupViewModel = hiltViewModel()
     val result by vm.saveResult.collectAsStateWithLifecycle()
-    DuressSetupScreen(onSave = { pin, mode -> vm.save(pin, mode) })
+    SubScreenScaffold("Duress PIN", nav) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            DuressSetupScreen(onSave = { pin, mode -> vm.save(pin, mode) })
+        }
+    }
     LaunchedEffect(result) {
         if (result is DuressSetupViewModel.SaveResult.Success) {
             nav.popBackStack()
@@ -434,21 +460,25 @@ private fun ThreatPresetRoute(db: TidesDatabase, nav: NavHostController) {
             .getOrDefault(ThreatPreset.DEFAULT)
     }
     val current = initial ?: return
-    ThreatPresetScreen(
-        initial = current,
-        onContinue = { preset ->
-            scope.launch {
-                withContext(Dispatchers.IO) {
-                    db.settingsDao().upsert(SettingsEntity("threat_preset", preset.name))
-                }
-                nav.popBackStack()
-            }
-        },
-    )
+    SubScreenScaffold("Privacy preset", nav) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            ThreatPresetScreen(
+                initial = current,
+                onContinue = { preset ->
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            db.settingsDao().upsert(SettingsEntity("threat_preset", preset.name))
+                        }
+                        nav.popBackStack()
+                    }
+                },
+            )
+        }
+    }
 }
 
 @Composable
-private fun BiometricRoute() {
+private fun BiometricRoute(nav: NavHostController) {
     val ctx = LocalContext.current
     val ep = remember {
         EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
@@ -463,17 +493,21 @@ private fun BiometricRoute() {
     )
     val enrolled by vm.enrolled.collectAsStateWithLifecycle()
     val status by vm.status.collectAsStateWithLifecycle()
-    BiometricToggleScreen(
-        enrolled = enrolled,
-        status = status,
-        onEnable = vm::enable,
-        onDisable = vm::disable,
-        onDismissStatus = vm::clearStatus,
-    )
+    SubScreenScaffold("Biometric unlock", nav) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            BiometricToggleScreen(
+                enrolled = enrolled,
+                status = status,
+                onEnable = vm::enable,
+                onDisable = vm::disable,
+                onDismissStatus = vm::clearStatus,
+            )
+        }
+    }
 }
 
 @Composable
-private fun BirthControlRoute(db: TidesDatabase) {
+private fun BirthControlRoute(db: TidesDatabase, nav: NavHostController) {
     val ctx = LocalContext.current
     val ep = remember {
         EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
@@ -485,7 +519,14 @@ private fun BirthControlRoute(db: TidesDatabase) {
         },
     )
     val s by vm.state.collectAsStateWithLifecycle()
-    BirthControlScreen(state = s, onSelect = vm::select, onSave = vm::save)
+    SubScreenScaffold("Birth control", nav) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            BirthControlScreen(state = s, onSelect = vm::select, onSave = vm::save)
+        }
+    }
+    LaunchedEffect(s.saved) {
+        if (s.saved) nav.popBackStack()
+    }
 }
 
 private fun ThreatPreset.label(): String = when (this) {
@@ -499,3 +540,45 @@ private fun <T : ViewModel> simpleFactory(create: () -> T): ViewModelProvider.Fa
         @Suppress("UNCHECKED_CAST")
         override fun <V : ViewModel> create(modelClass: Class<V>): V = create() as V
     }
+
+@Composable
+private fun AppearanceRoute(nav: NavHostController) {
+    val ctx = LocalContext.current
+    val ep = remember {
+        EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
+    }
+    val repo = ep.appearanceRepository()
+    val useDynamic by repo.useDynamicColor.collectAsStateWithLifecycle()
+    SubScreenScaffold("Appearance", nav) { p ->
+        Box(modifier = Modifier.padding(p)) {
+            AppearanceScreen(
+                useDynamicColor = useDynamic,
+                onToggle = repo::setUseDynamicColor,
+            )
+        }
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun SubScreenScaffold(
+    title: String,
+    nav: NavHostController,
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    androidx.compose.material3.Scaffold(
+        topBar = {
+            androidx.compose.material3.TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    androidx.compose.material3.IconButton(onClick = { nav.popBackStack() }) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                        )
+                    }
+                },
+            )
+        },
+    ) { inner -> content(inner) }
+}

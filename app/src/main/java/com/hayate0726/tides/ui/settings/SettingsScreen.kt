@@ -31,6 +31,7 @@ fun SettingsScreen(
     appStateIsUnlocked: Boolean,
     onBiometric: () -> Unit,
     onBirthControl: () -> Unit,
+    onAppearance: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -56,6 +57,7 @@ fun SettingsScreen(
 
         Spacer(Modifier.size(20.dp))
         SettingsSectionHeader("About")
+        SettingsRow("Appearance", onClick = onAppearance)
         SettingsRow("Check for updates", onClick = onCheckUpdates)
         SettingsRow("Send feedback", onClick = onSendFeedback)
         SettingsRow("Support development (Ko-fi)", onClick = onSupportDevelopment)

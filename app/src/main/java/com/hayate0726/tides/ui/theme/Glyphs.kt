@@ -10,6 +10,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -32,8 +34,10 @@ fun DropGlyph(
      * so users can distinguish them from logged (filled) period days.
      */
     filled: Boolean = true,
+    contentDescription: String? = null,
 ) {
-    Canvas(modifier = modifier.size(size)) {
+    val desc = contentDescription
+    Canvas(modifier = modifier.size(size).let { if (desc != null) it.semantics { this.contentDescription = desc } else it }) {
         val w = this.size.minDimension
         val path = Path().apply {
             moveTo(w * 0.5f, 0f)
@@ -53,8 +57,14 @@ fun DropGlyph(
  * Diamond glyph used on ovulation rings.
  */
 @Composable
-fun DiamondGlyph(color: Color, size: Dp = 6.dp, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(size)) {
+fun DiamondGlyph(
+    color: Color,
+    size: Dp = 6.dp,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+) {
+    val desc = contentDescription
+    Canvas(modifier = modifier.size(size).let { if (desc != null) it.semantics { this.contentDescription = desc } else it }) {
         val w = this.size.minDimension
         val path = Path().apply {
             moveTo(w * 0.5f, 0f)
@@ -76,10 +86,12 @@ fun DashedBar(
     color: Color,
     modifier: Modifier = Modifier,
     height: Dp = 3.dp,
+    contentDescription: String? = null,
 ) {
+    val desc = contentDescription
     // Caller's modifier wins (so it can fillMaxWidth or set a specific width);
     // height is applied last so it always takes effect.
-    Canvas(modifier = modifier.fillMaxWidth().height(height)) {
+    Canvas(modifier = modifier.fillMaxWidth().height(height).let { if (desc != null) it.semantics { this.contentDescription = desc } else it }) {
         drawLine(
             color = color,
             start = androidx.compose.ui.geometry.Offset(0f, this.size.height / 2),

@@ -31,8 +31,6 @@ fun BiometricToggleScreen(
     var pin by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        Text("Biometric unlock", style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.size(8.dp))
         Text(
             "Use your fingerprint or face to unlock Tides without typing your PIN. " +
                 "Your PIN is still required if biometric fails or after re-enrolling fingerprints.",

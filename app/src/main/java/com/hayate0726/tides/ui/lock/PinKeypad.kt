@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -56,7 +57,7 @@ fun PinKeypad(
 @Composable
 private fun KeyButton(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.aspectRatio(1.4f),
+        modifier = modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp).aspectRatio(1f),
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
         onClick = onClick,

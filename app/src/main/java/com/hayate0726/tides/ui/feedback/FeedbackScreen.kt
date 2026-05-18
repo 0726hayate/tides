@@ -38,8 +38,6 @@ fun FeedbackScreen() {
     } else ""
 
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        Text("Send feedback", style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.size(16.dp))
         Text(
             "Two channels. Pick the one that fits.",
             style = MaterialTheme.typography.bodyMedium,

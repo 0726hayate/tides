@@ -15,6 +15,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.hayate0726.tides.domain.model.CalendarView
 import com.hayate0726.tides.ui.theme.DiamondGlyph
@@ -98,7 +100,16 @@ private fun DayCell(
     hasSymptom: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.semantics(mergeDescendants = true) {
+        val parts = buildList {
+            add(date.format(java.time.format.DateTimeFormatter.ofPattern("MMMM d")))
+            if (isPeriod) add("period day")
+            if (isPredictedPeriod) add("predicted period")
+            if (isOvulation) add("ovulation")
+            if (hasSymptom) add("symptom logged")
+        }
+        contentDescription = parts.joinToString(", ")
+    }, contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
                 .size(36.dp)
@@ -124,7 +135,7 @@ private fun DayCell(
             )
             if (isPeriod) {
                 Box(modifier = Modifier.size(28.dp).padding(2.dp), contentAlignment = Alignment.TopEnd) {
-                    DropGlyph(color = MaterialTheme.colorScheme.onSecondary, size = 5.dp)
+                    DropGlyph(color = MaterialTheme.colorScheme.onSecondary, size = 5.dp, contentDescription = "Period day")
                 }
             }
             if (isPredictedPeriod) {
@@ -133,12 +144,13 @@ private fun DayCell(
                         color = MaterialTheme.colorScheme.secondary,
                         size = 5.dp,
                         filled = false,
+                        contentDescription = "Predicted period",
                     )
                 }
             }
             if (isOvulation) {
                 Box(modifier = Modifier.size(28.dp).padding(2.dp), contentAlignment = Alignment.TopEnd) {
-                    DiamondGlyph(color = MaterialTheme.colorScheme.onBackground, size = 5.dp)
+                    DiamondGlyph(color = MaterialTheme.colorScheme.onBackground, size = 5.dp, contentDescription = "Ovulation")
                 }
             }
         }

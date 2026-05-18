@@ -28,4 +28,5 @@ interface MainGraphEntryPoint {
     fun reminderScheduler(): ReminderScheduler
     fun widgetUpdater(): WidgetUpdater
     fun userPrivacyRepository(): com.hayate0726.tides.data.UserPrivacyRepository
+    fun appearanceRepository(): com.hayate0726.tides.ui.settings.AppearanceRepository
 }
