@@ -13,14 +13,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hayate0726.tides.AppState
 import com.hayate0726.tides.AppViewModel
+import com.hayate0726.tides.data.TidesDatabase
 import com.hayate0726.tides.ui.calendar.CalendarMonthState
 import com.hayate0726.tides.ui.calendar.CalendarScreen
 import com.hayate0726.tides.ui.calendar.CalendarViewModel
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+
+private class CalendarViewModelFactory(
+    private val db: TidesDatabase,
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        require(modelClass.isAssignableFrom(CalendarViewModel::class.java))
+        return CalendarViewModel(db) as T
+    }
+}
 
 /**
  * Main route host. Reads the unlocked TidesDatabase off AppState, exposes
@@ -44,7 +58,12 @@ fun MainHost(appViewModel: AppViewModel) {
         return
     }
     CompositionLocalProvider(LocalTidesDatabase provides db) {
-        val vm = remember(db) { CalendarViewModel(db) }
+        // Key by db identity so the VM is replaced (and the old one cleared
+        // via onCleared -> viewModelScope.cancel) when the DB changes.
+        val vm: CalendarViewModel = viewModel(
+            key = "calendar-${System.identityHashCode(db)}",
+            factory = CalendarViewModelFactory(db),
+        )
         val ui by vm.state.collectAsStateWithLifecycle()
         Box(modifier = Modifier.fillMaxSize()) {
             val periodDays = remember(ui.cycles) {

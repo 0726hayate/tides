@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import javax.inject.Inject
 
@@ -45,9 +47,20 @@ class AppViewModel @Inject constructor(
 
     fun clearUnlockError() { _unlockError.update { null } }
 
+    /**
+     * Serializes state transitions. Without this, lock() and onUnlockAttempt()
+     * can race — a concurrent open-then-close can leak a DB or close one
+     * that another collector is still reading from.
+     */
+    private val stateMutex = Mutex()
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            _state.value = if (authMetaFile.exists()) AppState.Locked else AppState.Onboarding
+            stateMutex.withLock {
+                if (_state.value is AppState.Loading) {
+                    _state.value = if (authMetaFile.exists()) AppState.Locked else AppState.Onboarding
+                }
+            }
         }
     }
 
@@ -60,23 +73,30 @@ class AppViewModel @Inject constructor(
             pin.zero()
             try {
                 when (result) {
-                    is LockManager.UnlockResult.Success -> {
-                        val db = DatabaseFactory.open(ctx, dbFile, result.key)
-                        result.key.zero()
-                        _state.update { AppState.Unlocked(db) }
-                    }
-                    LockManager.UnlockResult.WrongPin -> {
-                        _unlockError.update { "Wrong PIN" }
-                    }
-                    is LockManager.UnlockResult.RateLimited -> {
-                        _state.update { AppState.LockedCooldown(result.expiryEpochMs) }
-                    }
+                    is LockManager.UnlockResult.Success -> openAndUnlock(result.key)
+                    LockManager.UnlockResult.WrongPin -> _unlockError.update { "Wrong PIN" }
+                    is LockManager.UnlockResult.RateLimited ->
+                        stateMutex.withLock {
+                            _state.value = AppState.LockedCooldown(result.expiryEpochMs)
+                        }
                     LockManager.UnlockResult.Duress -> handleDuress(pinChars)
                 }
             } finally {
                 java.util.Arrays.fill(pinChars, 0.toChar())
             }
         }
+    }
+
+    private suspend fun openAndUnlock(key: com.hayate0726.tides.crypto.DbKey) {
+        val db = try {
+            DatabaseFactory.open(ctx, dbFile, key)
+        } catch (e: Exception) {
+            _unlockError.update { "Could not open database. Try again or wipe and re-onboard." }
+            key.zero()
+            return
+        }
+        key.zero()
+        replaceUnlockedState(AppState.Unlocked(db))
     }
 
     private suspend fun handleDuress(pinChars: CharArray) {
@@ -88,16 +108,25 @@ class AppViewModel @Inject constructor(
                 val duressPin = Pin(pinChars.copyOf())
                 val key = KeyDerivation.deriveKey(duressPin, duress.keySalt)
                 duressPin.zero()
-                val db = DatabaseFactory.open(ctx, decoyFile, key)
+                val db = try {
+                    DatabaseFactory.open(ctx, decoyFile, key)
+                } catch (e: Exception) {
+                    _unlockError.update { "Could not open decoy database." }
+                    key.zero()
+                    return
+                }
                 key.zero()
-                _state.update { AppState.UnlockedDecoy(db) }
+                replaceUnlockedState(AppState.UnlockedDecoy(db))
             }
             AuthMeta.DuressMode.WIPE -> {
                 val decoyFile = File(ctx.filesDir, "decoy.db")
-                dbFile.delete()
-                decoyFile.delete()
-                authMetaFile.delete()
-                _state.update { AppState.Onboarding }
+                stateMutex.withLock {
+                    closeCurrentDb()
+                    dbFile.delete()
+                    decoyFile.delete()
+                    authMetaFile.delete()
+                    _state.value = AppState.Onboarding
+                }
             }
             AuthMeta.DuressMode.OFF -> Unit
         }
@@ -105,14 +134,29 @@ class AppViewModel @Inject constructor(
 
     fun lock() {
         viewModelScope.launch(Dispatchers.IO) {
-            (_state.value as? AppState.Unlocked)?.db?.close()
-            (_state.value as? AppState.UnlockedDecoy)?.db?.close()
-            _state.update { AppState.Locked }
+            stateMutex.withLock {
+                closeCurrentDb()
+                _state.value = AppState.Locked
+            }
         }
     }
 
     /** Called by OnboardingViewModel once auth_meta.bin and the DB exist. */
     fun setUnlocked(db: TidesDatabase) {
-        _state.update { AppState.Unlocked(db) }
+        viewModelScope.launch(Dispatchers.IO) {
+            replaceUnlockedState(AppState.Unlocked(db))
+        }
+    }
+
+    private suspend fun replaceUnlockedState(newState: AppState) {
+        stateMutex.withLock {
+            closeCurrentDb()
+            _state.value = newState
+        }
+    }
+
+    private fun closeCurrentDb() {
+        (_state.value as? AppState.Unlocked)?.db?.close()
+        (_state.value as? AppState.UnlockedDecoy)?.db?.close()
     }
 }

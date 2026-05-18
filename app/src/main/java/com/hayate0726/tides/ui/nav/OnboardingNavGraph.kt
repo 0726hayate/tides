@@ -2,7 +2,10 @@ package com.hayate0726.tides.ui.nav
 
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
@@ -74,10 +77,16 @@ fun NavGraphBuilder.onboardingNavGraph(
             })
         }
         composable(Routes.OnboardingCompleteRoute) {
-            val vm = sharedOnboardingVm(nav)
-            val db = vm?.completion?.collectAsStateWithLifecycle()?.value
-            LaunchedEffect(db) {
-                db?.let { onComplete(it) }
+            // Resolve the shared VM exactly once, on first composition, and
+            // capture its `completion` flow in a remember. After onComplete(db)
+            // fires, AppViewModel.setUnlocked pops the onboarding subgraph;
+            // we must NOT re-resolve the VM (would throw — Routes.Onboarding
+            // no longer exists on the back stack).
+            val initialVm = sharedOnboardingVm(nav)
+            val completion = remember { initialVm?.completion }
+            LaunchedEffect(completion) {
+                val db = completion?.filterNotNull()?.first() ?: return@LaunchedEffect
+                onComplete(db)
             }
             OnboardingComplete()
         }

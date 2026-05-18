@@ -1,20 +1,14 @@
 package com.hayate0726.tides.ui.nav
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -26,37 +20,54 @@ import com.hayate0726.tides.ui.lock.LockHost
 
 /**
  * Root navigation host. Observes AppViewModel.state and routes between
- * Loading / Onboarding / Lock / Main destinations.
+ * Onboarding / Lock / Main destinations.
  *
- * Plan 3 ships a minimal Main route (placeholder) — the full Calendar /
- * Log / Stats / Settings integration is wired into Main in Plan 4 once
- * the unlocked TidesDatabase can be passed down through a CompositionLocal
- * or a feature-level ViewModel factory.
+ * While AppState is Loading we render a CircularProgressIndicator and
+ * defer building NavHost so its `startDestination` can be chosen from
+ * the real initial state. Without this, NavHost would briefly compose
+ * the Onboarding subgraph on every launch (including launches where
+ * auth_meta.bin already exists), creating an OnboardingViewModel and
+ * running its init side-effects only to immediately pop it.
  */
 @Composable
 fun TidesNavHost() {
     val app: AppViewModel = hiltViewModel()
     val state by app.state.collectAsStateWithLifecycle()
-    val nav = rememberNavController()
-
-    LaunchedEffect(state) {
-        val target = when (state) {
-            AppState.Loading -> return@LaunchedEffect
-            AppState.Onboarding -> Routes.Onboarding
-            AppState.Locked, is AppState.LockedCooldown -> Routes.Lock
-            is AppState.Unlocked, is AppState.UnlockedDecoy -> Routes.Main
-        }
-        if (nav.currentBackStackEntry?.destination?.route != target) {
-            nav.navigate(target) { popUpTo(0) { inclusive = true } }
-        }
-    }
 
     if (state is AppState.Loading) {
         LoadingScreen()
         return
     }
 
-    NavHost(navController = nav, startDestination = Routes.Onboarding) {
+    val nav = rememberNavController()
+    val startDestination = remember(/* state captured once on first non-Loading frame */) {
+        when (state) {
+            AppState.Onboarding -> Routes.Onboarding
+            AppState.Locked, is AppState.LockedCooldown -> Routes.Lock
+            is AppState.Unlocked, is AppState.UnlockedDecoy -> Routes.Main
+            AppState.Loading -> Routes.Onboarding // unreachable; the if above returned
+        }
+    }
+
+    // Subsequent state transitions: route between top-level destinations.
+    // Keyed on the target route (not the full AppState) so Unlocked(db1) ->
+    // Unlocked(db2) doesn't pop the back stack just because the db instance
+    // swapped.
+    val targetRoute = when (state) {
+        AppState.Onboarding -> Routes.Onboarding
+        AppState.Locked, is AppState.LockedCooldown -> Routes.Lock
+        is AppState.Unlocked, is AppState.UnlockedDecoy -> Routes.Main
+        AppState.Loading -> null
+    }
+    LaunchedEffect(targetRoute) {
+        if (targetRoute == null) return@LaunchedEffect
+        if (nav.currentBackStackEntry?.destination?.route == targetRoute) return@LaunchedEffect
+        // Don't navigate on first composition — startDestination already points there.
+        if (nav.currentBackStackEntry == null) return@LaunchedEffect
+        nav.navigate(targetRoute) { popUpTo(0) { inclusive = true } }
+    }
+
+    NavHost(navController = nav, startDestination = startDestination) {
         onboardingNavGraph(nav, onComplete = { db -> app.setUnlocked(db) })
 
         composable(Routes.Lock) {
@@ -73,26 +84,5 @@ fun TidesNavHost() {
 private fun LoadingScreen() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun PlaceholderScreen(
-    title: String,
-    subtitle: String,
-    actionLabel: String? = null,
-    onAction: (() -> Unit)? = null,
-) {
-    Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text(title, style = MaterialTheme.typography.headlineMedium)
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium)
-            if (actionLabel != null && onAction != null) {
-                Button(onClick = onAction) { Text(actionLabel) }
-            }
-        }
     }
 }
