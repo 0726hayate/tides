@@ -33,6 +33,7 @@ class AppViewModel @Inject constructor(
     private val authMetaStore: FileAuthMetaStore,
     private val lockManager: LockManager,
     private val biometricKeyStore: com.hayate0726.tides.crypto.BiometricKeyStore,
+    private val reminderScheduler: com.hayate0726.tides.notifications.ReminderScheduler,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<AppState>(AppState.Loading)
@@ -163,6 +164,9 @@ class AppViewModel @Inject constructor(
                     authMetaFile.delete()
                     biometricKeyStore.clear()
                     com.hayate0726.tides.widget.WidgetSummary.delete(ctx)
+                    // Scheduled period reminders would fire post-wipe and
+                    // betray prior app use to a duress attacker.
+                    reminderScheduler.cancelAll()
                     _state.value = AppState.Onboarding
                 }
             }

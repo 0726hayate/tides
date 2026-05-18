@@ -70,6 +70,19 @@ class ReminderScheduler @Inject constructor(
         }
     }
 
+    /**
+     * Cancel every reminder type. Called from duress WIPE so post-wipe
+     * notifications can't fire and betray prior app use.
+     */
+    fun cancelAll() {
+        val alarmMgr = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val title = ""
+        val visibility = NotificationCompat.VISIBILITY_SECRET
+        for (type in ReminderType.entries) {
+            alarmMgr.cancel(pendingIntentFor(type, title, visibility))
+        }
+    }
+
     private fun pendingIntentFor(
         type: ReminderType,
         title: String,
