@@ -113,4 +113,9 @@ class BiometricToggleViewModel(
     }
 
     fun clearStatus() { _status.value = Status.Idle }
+
+    override fun onCleared() {
+        pendingKey?.zero()
+        pendingKey = null
+    }
 }

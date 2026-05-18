@@ -13,6 +13,7 @@ captures/
 
 # Kotlin
 *.kotlin_module
+.kotlin/
 
 # OS
 .DS_Store
