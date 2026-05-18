@@ -125,6 +125,7 @@ class AppViewModel @Inject constructor(
                     dbFile.delete()
                     decoyFile.delete()
                     authMetaFile.delete()
+                    com.hayate0726.tides.widget.WidgetSummary.delete(ctx)
                     _state.value = AppState.Onboarding
                 }
             }

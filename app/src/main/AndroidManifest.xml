@@ -9,6 +9,18 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!--
+        Glance transitively merges these permissions into the APK. Tides' spec
+        §2 forbids network, foreground services, and boot receivers, so we
+        strip them at manifest-merge time. The Glance widget keeps working —
+        it only reads our app-private summary file and opens an activity on tap.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" tools:node="remove" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" tools:node="remove" />
+
     <application
         android:name=".TidesApplication"
         android:allowBackup="false"
@@ -34,6 +46,18 @@
         <receiver
             android:name=".notifications.ReminderReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".widget.TidesDiscreetWidgetReceiver"
+            android:exported="false"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tides_discreet_widget_info" />
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"

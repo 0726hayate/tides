@@ -6,6 +6,7 @@ import com.hayate0726.tides.data.CycleRepository
 import com.hayate0726.tides.data.TidesDatabase
 import com.hayate0726.tides.domain.model.CalendarView
 import com.hayate0726.tides.domain.model.Cycle
+import com.hayate0726.tides.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ import java.time.YearMonth
 
 class CalendarViewModel(
     private val db: TidesDatabase,
+    private val widgetUpdater: WidgetUpdater? = null,
 ) : ViewModel() {
 
     private val repo = CycleRepository(
@@ -48,6 +50,7 @@ class CalendarViewModel(
             val cycles = repo.detectCycles(from, to)
             val symptoms = repo.symptomEntriesInRange(from, to).map { it.date }.toSet()
             _state.value = _state.value.copy(cycles = cycles, symptomDays = symptoms)
+            widgetUpdater?.publish(cycles)
         }
     }
 

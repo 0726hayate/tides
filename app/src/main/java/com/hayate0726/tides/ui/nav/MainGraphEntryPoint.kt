@@ -4,6 +4,7 @@ import com.hayate0726.tides.crypto.FileAuthMetaStore
 import com.hayate0726.tides.di.CyclesDbFile
 import com.hayate0726.tides.notifications.NotificationPreferences
 import com.hayate0726.tides.notifications.ReminderScheduler
+import com.hayate0726.tides.widget.WidgetUpdater
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -23,4 +24,5 @@ interface MainGraphEntryPoint {
     @CyclesDbFile fun cyclesDbFile(): File
     fun notificationPreferences(): NotificationPreferences
     fun reminderScheduler(): ReminderScheduler
+    fun widgetUpdater(): WidgetUpdater
 }

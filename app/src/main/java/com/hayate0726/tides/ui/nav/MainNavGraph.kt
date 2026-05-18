@@ -114,9 +114,14 @@ private fun navigateTab(nav: NavHostController, route: String) {
 
 @Composable
 private fun CalendarRoute(db: TidesDatabase) {
+    val ctx = LocalContext.current
+    val widgetUpdater = remember {
+        EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
+            .widgetUpdater()
+    }
     val vm: CalendarViewModel = viewModel(
         key = "calendar-${System.identityHashCode(db)}",
-        factory = simpleFactory { CalendarViewModel(db) },
+        factory = simpleFactory { CalendarViewModel(db, widgetUpdater) },
     )
     val logVm: LogViewModel = viewModel(
         key = "log-${System.identityHashCode(db)}",

@@ -16,9 +16,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Release pipeline (Wave 5).** `app/build.gradle.kts` reads signing config exclusively from environment variables — no keystore is ever checked in, and F-Droid maintainer builds run unsigned for downstream signing. `.github/workflows/release.yml` triggers on `v*` tags, decodes a base64 keystore from a GitHub secret, runs the same `aapt2 dump permissions` audit as CI on the release APK, and posts the signed artifact to GitHub Releases.
 - **F-Droid metadata.** `fastlane/metadata/android/en-US/` directory with `title.txt`, `short_description.txt`, `full_description.txt`, and per-version changelogs.
 
-### Deferred to v1.1
-- Glance home-screen widget (spec §5.13). The widget needs an unencrypted `widget_summary.bin` on disk; the variant + threat-model design moves to a follow-up rather than landing a half-baked widget for v1.
-- Settings navigation: the per-feature screens (Notifications, Backup, Duress PIN, Feedback) ship as standalone composables but aren't yet wired into a Settings nav graph — `MainHost` is still Calendar-only. Lands alongside bottom navigation.
+### Added — v1.1 follow-ups
+- **Bottom navigation + Settings nav graph.** `MainHost` becomes a Scaffold with three tabs (Calendar / Stats / Settings); five Settings sub-routes (Reminders, Backup, Duress, privacy preset, Feedback) wire up the per-feature screens shipped in Plan 4. Day-tap on the calendar opens `LogBottomSheet` via `ModalBottomSheet`; save refreshes the calendar and republishes the widget snapshot.
+- **Backup restore.** Full spec §5.8 flow: SAF picker → primary PIN + backup password → confirm dialog → `BackupViewModel.restore()` validates both passwords, extracts the rekeyed payload, `PRAGMA rekey`s it back to the live primary key, and hands the file to `AppViewModel.replaceDatabaseFile()` for a mutex-guarded atomic swap (NIO `ATOMIC_MOVE` with copy+delete fallback). AuthMeta and primary PIN are unchanged — the user re-unlocks with their existing PIN. Instrumented test covers the rekey path end-to-end.
+- **Discreet Glance widget (spec §5.13).** `widget/TidesDiscreetWidget` renders the current cycle-day number on a neutral background; tap opens the app. Reads from `widget_summary.bin` (17 bytes: magic + version + cycle day + timestamp) under `filesDir`, written by `WidgetUpdater` from inside `CalendarViewModel.refresh()`. The "Normal" variant (cycle day + predicted date) remains deferred — adding it expands the summary file's leak surface and needs a Settings variant picker. Glance transitively merges `INTERNET`-adjacent permissions (`ACCESS_NETWORK_STATE`, `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE`, `WAKE_LOCK`, `USE_FINGERPRINT`); all five are stripped at manifest-merge time via `tools:node="remove"` so the release APK still declares only `USE_BIOMETRIC` / `VIBRATE` / `POST_NOTIFICATIONS`. Duress-wipe now deletes `widget_summary.bin`.
+
+### Deferred to v1.2
+- Glance "Normal" variant (cycle day + predicted date). Needs a Settings variant picker and expands the unencrypted summary file's content.
 
 ### Added — Plan 3: Core UI
 - Material 3 theme system under `ui/theme/`: CVD-safe color palette (`TidesColors`), 12 typography styles, Shapes, and the root `TidesTheme` composable. Light palette = cream + warm tones; dark = black + warm reds.
