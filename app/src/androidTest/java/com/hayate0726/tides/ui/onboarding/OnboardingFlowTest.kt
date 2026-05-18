@@ -8,6 +8,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.hayate0726.tides.MainActivity
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -17,18 +19,21 @@ import java.io.File
 /**
  * Drives the onboarding flow end-to-end through MainActivity's NavHost.
  *
- * The test does NOT use HiltAndroidRule — the project does not include
- * `hilt-android-testing` yet (deferred to a hardening pass). MainActivity
- * is @AndroidEntryPoint, so createAndroidComposeRule exercises the real
- * production Hilt graph. We delete the app's auth_meta.bin and tides.db
+ * MainActivity is @AndroidEntryPoint so createAndroidComposeRule exercises the
+ * real production Hilt graph. We delete the app's auth_meta.bin and tides.db
  * before/after each run so the flow always starts cold.
  */
+@HiltAndroidTest
 class OnboardingFlowTest {
 
-    @get:Rule val rule = createAndroidComposeRule<MainActivity>()
+    @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
+    @get:Rule(order = 1) val rule = createAndroidComposeRule<MainActivity>()
 
     @Before
-    fun resetAppData() = clearFiles()
+    fun setUp() {
+        hiltRule.inject()
+        clearFiles()
+    }
 
     @After
     fun cleanup() = clearFiles()

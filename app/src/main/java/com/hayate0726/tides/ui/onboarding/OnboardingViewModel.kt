@@ -40,12 +40,35 @@ class OnboardingViewModel @Inject constructor(
 
     data class DraftState(
         val goals: Set<Goal> = setOf(Goal.TRACK_PERIOD, Goal.TRACK_SYMPTOMS),
-        val pin: String = "",
+        val pinChars: CharArray? = null,
         val biometricEnabled: Boolean = true,
         val threatPreset: ThreatPreset = ThreatPreset.DEFAULT,
         val birthControl: BirthControlMethod = BirthControlMethod.NONE,
         val lastPeriodStart: LocalDate? = null,
-    )
+    ) {
+        // CharArray's equals is identity-based; for the StateFlow change-detection
+        // we want value semantics so re-emitting the same draft doesn't churn.
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is DraftState) return false
+            if (goals != other.goals) return false
+            if (pinChars?.toList() != other.pinChars?.toList()) return false
+            if (biometricEnabled != other.biometricEnabled) return false
+            if (threatPreset != other.threatPreset) return false
+            if (birthControl != other.birthControl) return false
+            if (lastPeriodStart != other.lastPeriodStart) return false
+            return true
+        }
+        override fun hashCode(): Int {
+            var r = goals.hashCode()
+            r = 31 * r + (pinChars?.toList()?.hashCode() ?: 0)
+            r = 31 * r + biometricEnabled.hashCode()
+            r = 31 * r + threatPreset.hashCode()
+            r = 31 * r + birthControl.hashCode()
+            r = 31 * r + (lastPeriodStart?.hashCode() ?: 0)
+            return r
+        }
+    }
 
     private val _draft = MutableStateFlow(DraftState())
     val draft: StateFlow<DraftState> = _draft.asStateFlow()
@@ -54,7 +77,14 @@ class OnboardingViewModel @Inject constructor(
     val completion: StateFlow<TidesDatabase?> = _completion.asStateFlow()
 
     fun setGoals(goals: Set<Goal>) { _draft.value = _draft.value.copy(goals = goals) }
-    fun setPin(pin: String) { _draft.value = _draft.value.copy(pin = pin) }
+    fun setPin(pin: String) {
+        val chars = pin.toCharArray()
+        _draft.value = _draft.value.copy(pinChars = chars)
+        // pin (String) goes out of scope and is eligible for GC at the JVM's
+        // discretion. We accept the residual String pool hit during PinSetupScreen
+        // composition — eliminating it requires a custom text-input component,
+        // out of scope for v1.0. Lifetime: until complete() runs and zeros chars.
+    }
     fun setBiometric(on: Boolean) { _draft.value = _draft.value.copy(biometricEnabled = on) }
     fun setThreatPreset(p: ThreatPreset) { _draft.value = _draft.value.copy(threatPreset = p) }
     fun setBc(m: BirthControlMethod) { _draft.value = _draft.value.copy(birthControl = m) }
@@ -67,10 +97,13 @@ class OnboardingViewModel @Inject constructor(
             val keySalt = ByteArray(16).also(rng::nextBytes)
             val pinHashSalt = ByteArray(16).also(rng::nextBytes)
 
-            val pin = Pin(draft.pin.toCharArray())
+            val pinChars = draft.pinChars ?: error("PIN not set")
+            val pin = Pin(pinChars.copyOf())
             val pinHash = KeyDerivation.derivePinHash(pin, pinHashSalt)
             val key = KeyDerivation.deriveKey(pin, keySalt)
             pin.zero()
+            java.util.Arrays.fill(pinChars, 0.toChar())
+            _draft.value = _draft.value.copy(pinChars = null)
 
             authMetaStore.initialize(
                 AuthMeta(

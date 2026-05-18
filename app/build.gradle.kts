@@ -17,7 +17,7 @@ android {
         versionCode = 1
         versionName = "0.1.0-dev"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.hayate0726.tides.HiltTestRunner"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -133,6 +133,8 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
     androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.hilt.android.testing)
+    kspAndroidTest(libs.hilt.compiler)
 }
 
 ksp {

@@ -16,8 +16,12 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.time.LocalDate
 
+@dagger.hilt.android.testing.HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class BackupRoundTripTest {
+
+    @get:org.junit.Rule(order = 0)
+    val hiltRule = dagger.hilt.android.testing.HiltAndroidRule(this)
 
     @Test
     fun export_and_import_round_trip_with_correct_password() = runBlocking {
