@@ -29,6 +29,7 @@ fun SettingsScreen(
     onSupportDevelopment: () -> Unit,
     onLock: () -> Unit,
     appStateIsUnlocked: Boolean,
+    onBiometric: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -41,6 +42,7 @@ fun SettingsScreen(
         if (duressAvailable) {
             SettingsRow("Duress PIN", onClick = onDuress)
         }
+        SettingsRow("Biometric unlock", onClick = onBiometric)
         if (appStateIsUnlocked) {
             SettingsRow("Lock now", onClick = onLock)
         }

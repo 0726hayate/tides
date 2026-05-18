@@ -23,4 +23,5 @@ object Routes {
     const val SettingsDuress = "main/settings/duress"
     const val SettingsThreatPreset = "main/settings/threat_preset"
     const val SettingsFeedback = "main/settings/feedback"
+    const val SettingsBiometric = "main/settings/biometric"
 }

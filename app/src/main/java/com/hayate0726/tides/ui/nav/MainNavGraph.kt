@@ -34,6 +34,8 @@ import com.hayate0726.tides.ui.log.LogViewModel
 import com.hayate0726.tides.ui.onboarding.ThreatPresetScreen
 import com.hayate0726.tides.ui.settings.BackupScreen
 import com.hayate0726.tides.ui.settings.BackupViewModel
+import com.hayate0726.tides.ui.settings.BiometricToggleScreen
+import com.hayate0726.tides.ui.settings.BiometricToggleViewModel
 import com.hayate0726.tides.ui.settings.DuressSetupScreen
 import com.hayate0726.tides.ui.settings.DuressSetupViewModel
 import com.hayate0726.tides.ui.settings.NotificationsScreen
@@ -100,6 +102,7 @@ fun MainScaffold(appViewModel: AppViewModel, db: TidesDatabase) {
             composable(Routes.SettingsDuress) { DuressRoute(nav) }
             composable(Routes.SettingsThreatPreset) { ThreatPresetRoute(db, nav) }
             composable(Routes.SettingsFeedback) { FeedbackScreen() }
+            composable(Routes.SettingsBiometric) { BiometricRoute() }
         }
     }
 }
@@ -251,6 +254,7 @@ private fun SettingsRoute(appViewModel: AppViewModel, db: TidesDatabase, nav: Na
         },
         onLock = { appViewModel.lock() },
         appStateIsUnlocked = appState is AppState.Unlocked || appState is AppState.UnlockedDecoy,
+        onBiometric = { nav.navigate(Routes.SettingsBiometric) },
     )
 }
 
@@ -351,6 +355,31 @@ private fun ThreatPresetRoute(db: TidesDatabase, nav: NavHostController) {
                 nav.popBackStack()
             }
         },
+    )
+}
+
+@Composable
+private fun BiometricRoute() {
+    val ctx = LocalContext.current
+    val ep = remember {
+        EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
+    }
+    val vm: BiometricToggleViewModel = viewModel(
+        factory = simpleFactory {
+            BiometricToggleViewModel(
+                authMetaStore = ep.authMetaStore(),
+                biometricKeyStore = ep.biometricKeyStore(),
+            )
+        },
+    )
+    val enrolled by vm.enrolled.collectAsStateWithLifecycle()
+    val status by vm.status.collectAsStateWithLifecycle()
+    BiometricToggleScreen(
+        enrolled = enrolled,
+        status = status,
+        onEnable = vm::enable,
+        onDisable = vm::disable,
+        onDismissStatus = vm::clearStatus,
     )
 }
 

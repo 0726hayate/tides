@@ -1,5 +1,6 @@
 package com.hayate0726.tides.crypto
 
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.nio.ByteBuffer
@@ -27,6 +28,13 @@ object KeystoreWrapper {
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val IV_BYTES = 12
     private const val TAG_BITS = 128
+
+    /**
+     * How long after a successful BiometricPrompt session the wrapped-key
+     * cipher operation can run. Tides does the cipher op within milliseconds;
+     * 30s is generous headroom that still feels per-session to the user.
+     */
+    private const val AUTH_VALIDITY_SECONDS = 30
 
     fun wrap(alias: String, requireBiometric: Boolean, plaintext: ByteArray): ByteArray {
         val key = getOrCreateKey(alias, requireBiometric)
@@ -75,8 +83,24 @@ object KeystoreWrapper {
             .setRandomizedEncryptionRequired(true)
 
         if (requireBiometric) {
+            // setInvalidatedByBiometricEnrollment(true) survives the validity-
+            // duration model: re-enrolling fingerprints throws
+            // KeyPermanentlyInvalidatedException at next cipher.init, which the
+            // caller handles by clearing biometric.bin and falling back to PIN.
             specBuilder.setUserAuthenticationRequired(true)
             specBuilder.setInvalidatedByBiometricEnrollment(true)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // API 30+: explicit auth types + validity window.
+                specBuilder.setUserAuthenticationParameters(
+                    AUTH_VALIDITY_SECONDS,
+                    KeyProperties.AUTH_BIOMETRIC_STRONG,
+                )
+            } else {
+                // API 26-29: deprecated but functional. The two paths set the
+                // same on-disk semantics.
+                @Suppress("DEPRECATION")
+                specBuilder.setUserAuthenticationValidityDurationSeconds(AUTH_VALIDITY_SECONDS)
+            }
         }
         gen.init(specBuilder.build())
         return gen.generateKey()

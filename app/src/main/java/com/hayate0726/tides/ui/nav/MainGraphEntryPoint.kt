@@ -1,5 +1,6 @@
 package com.hayate0726.tides.ui.nav
 
+import com.hayate0726.tides.crypto.BiometricKeyStore
 import com.hayate0726.tides.crypto.FileAuthMetaStore
 import com.hayate0726.tides.di.CyclesDbFile
 import com.hayate0726.tides.notifications.NotificationPreferences
@@ -22,6 +23,7 @@ import java.io.File
 interface MainGraphEntryPoint {
     fun authMetaStore(): FileAuthMetaStore
     @CyclesDbFile fun cyclesDbFile(): File
+    fun biometricKeyStore(): BiometricKeyStore
     fun notificationPreferences(): NotificationPreferences
     fun reminderScheduler(): ReminderScheduler
     fun widgetUpdater(): WidgetUpdater

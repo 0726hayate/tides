@@ -32,6 +32,7 @@ class AppViewModel @Inject constructor(
     @AuthMetaFile private val authMetaFile: File,
     private val authMetaStore: FileAuthMetaStore,
     private val lockManager: LockManager,
+    private val biometricKeyStore: com.hayate0726.tides.crypto.BiometricKeyStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<AppState>(AppState.Loading)
@@ -87,6 +88,41 @@ class AppViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Attempt unlock using the biometric-wrapped DB key. Called from LockHost
+     * after BiometricPrompt.AuthenticationCallback.onAuthenticationSucceeded.
+     * Bypasses LockManager — BiometricPrompt has its own lockout.
+     */
+    fun onBiometricSuccess() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val key = try {
+                biometricKeyStore.unwrap()
+            } catch (e: android.security.keystore.KeyPermanentlyInvalidatedException) {
+                biometricKeyStore.clear()
+                _unlockError.update {
+                    "Biometric unlock was disabled because your fingerprints changed. " +
+                        "Re-enable in Settings."
+                }
+                return@launch
+            } catch (e: android.security.keystore.UserNotAuthenticatedException) {
+                // Should not happen post-fix: setUserAuthenticationValidityDuration
+                // means the immediately-prior BiometricPrompt success authorized
+                // this cipher op. If we hit this, our validity window is too short
+                // or the auth state didn't propagate. Surface generically — the
+                // PIN path remains available.
+                _unlockError.update { "Biometric unlock failed. Try your PIN." }
+                return@launch
+            } catch (e: Exception) {
+                _unlockError.update { "Biometric unlock failed. Try your PIN." }
+                return@launch
+            }
+            openAndUnlock(key)
+        }
+    }
+
+    /** True if biometric.bin exists. UI uses this to decide whether to show the prompt. */
+    fun isBiometricEnrolled(): Boolean = biometricKeyStore.isEnrolled()
+
     private suspend fun openAndUnlock(key: com.hayate0726.tides.crypto.DbKey) {
         val db = try {
             DatabaseFactory.open(ctx, dbFile, key)
@@ -125,6 +161,7 @@ class AppViewModel @Inject constructor(
                     dbFile.delete()
                     decoyFile.delete()
                     authMetaFile.delete()
+                    biometricKeyStore.clear()
                     com.hayate0726.tides.widget.WidgetSummary.delete(ctx)
                     _state.value = AppState.Onboarding
                 }
