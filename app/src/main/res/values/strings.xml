@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Tides</string>
     <string name="widget_discreet_description">Tides — a small cycle-day number. No app data exposed beyond what you see.</string>
+    <string name="widget_normal_description">Tides — cycle day with predicted period and (when relevant) fertile-window date.</string>
 </resources>

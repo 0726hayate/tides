@@ -41,4 +41,9 @@ object CryptoModule {
         store: FileAuthMetaStore,
         clock: LockManager.Clock,
     ): LockManager = LockManager(store, clock)
+
+    @Provides
+    @Singleton
+    fun provideUserPrivacyRepository(): com.hayate0726.tides.data.UserPrivacyRepository =
+        com.hayate0726.tides.data.UserPrivacyRepository()
 }

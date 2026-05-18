@@ -3,6 +3,7 @@ package com.hayate0726.tides.widget
 import android.content.Context
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
+import com.hayate0726.tides.domain.CyclePredictor
 import com.hayate0726.tides.domain.model.Cycle
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -13,31 +14,29 @@ import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Writes the widget summary file and pokes the Glance widget to redraw.
- *
- * Called from [com.hayate0726.tides.ui.calendar.CalendarViewModel] and
- * [com.hayate0726.tides.ui.log.LogViewModel] after data changes — i.e.
- * only while the app is unlocked. The widget renders from the on-disk
- * snapshot afterwards, with no access to the encrypted database.
- *
- * If no widget has been added to the home screen, [updateAll] is a no-op,
- * so writing the snapshot is still useful for the next time a widget is
- * installed.
- */
 @Singleton
 class WidgetUpdater @Inject constructor(
     @ApplicationContext private val ctx: Context,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    fun publish(cycles: List<Cycle>, today: LocalDate = LocalDate.now()) {
-        val day = WidgetSummary.computeCycleDay(today, cycles)
+    fun publish(
+        cycles: List<Cycle>,
+        showOvulation: Boolean = false,
+        today: LocalDate = LocalDate.now(),
+    ) {
+        val cycleDay = WidgetSummary.computeCycleDay(today, cycles)
+        val prediction = CyclePredictor.predictNextPeriod(cycles)
+        val ovulationDay: Long? = if (showOvulation) computeOvulationEpochDay(cycles, today) else null
+
         WidgetSummary.write(
             ctx,
             WidgetSummary.Snapshot(
-                cycleDay = day,
+                cycleDay = cycleDay,
                 updatedAtEpochMs = System.currentTimeMillis(),
+                predictedPeriodStartEpochDay = prediction?.start?.toEpochDay(),
+                showOvulation = showOvulation,
+                ovulationDateEpochDay = ovulationDay,
             ),
         )
         scope.launch {
@@ -46,7 +45,30 @@ class WidgetUpdater @Inject constructor(
                 if (mgr.getGlanceIds(TidesDiscreetWidget::class.java).isNotEmpty()) {
                     TidesDiscreetWidget().updateAll(ctx)
                 }
+                if (mgr.getGlanceIds(TidesNormalWidget::class.java).isNotEmpty()) {
+                    TidesNormalWidget().updateAll(ctx)
+                }
             }
         }
+    }
+
+    /**
+     * Estimates the ovulation date using the fixed-luteal heuristic:
+     * ovulationDay = medianCycleLength - 14, counted from the active cycle start.
+     * Returns null if there is no active cycle or no completed cycle lengths.
+     */
+    private fun computeOvulationEpochDay(cycles: List<Cycle>, today: LocalDate): Long? {
+        val active = cycles.firstOrNull { it.isActive } ?: return null
+        val completedLengths = cycles.filter { !it.isActive }.mapNotNull { it.length }
+        if (completedLengths.isEmpty()) return null
+        val sorted = completedLengths.sorted()
+        val median = sorted[(sorted.size - 1) / 2]
+        // Trust range matches PhaseCalculator.compute (spec §5.5): the
+        // fixed-luteal heuristic is unreliable outside a typical cycle window,
+        // so we suppress the widget's fertile-window line for users whose
+        // median cycle length is below 21 or above 35 days.
+        if (median !in 21..35) return null
+        val ovulationDayOfCycle = median - 14
+        return active.start.plusDays((ovulationDayOfCycle - 1).toLong()).toEpochDay()
     }
 }

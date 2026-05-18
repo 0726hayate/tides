@@ -36,6 +36,8 @@ import com.hayate0726.tides.ui.settings.BackupScreen
 import com.hayate0726.tides.ui.settings.BackupViewModel
 import com.hayate0726.tides.ui.settings.BiometricToggleScreen
 import com.hayate0726.tides.ui.settings.BiometricToggleViewModel
+import com.hayate0726.tides.ui.settings.BirthControlScreen
+import com.hayate0726.tides.ui.settings.BirthControlViewModel
 import com.hayate0726.tides.ui.settings.DuressSetupScreen
 import com.hayate0726.tides.ui.settings.DuressSetupViewModel
 import com.hayate0726.tides.ui.settings.NotificationsScreen
@@ -103,6 +105,7 @@ fun MainScaffold(appViewModel: AppViewModel, db: TidesDatabase) {
             composable(Routes.SettingsThreatPreset) { ThreatPresetRoute(db, nav) }
             composable(Routes.SettingsFeedback) { FeedbackScreen() }
             composable(Routes.SettingsBiometric) { BiometricRoute() }
+            composable(Routes.SettingsBirthControl) { BirthControlRoute(db) }
         }
     }
 }
@@ -122,9 +125,15 @@ private fun CalendarRoute(db: TidesDatabase) {
         EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
             .widgetUpdater()
     }
+    val userPrivacyRepository = remember {
+        EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
+            .userPrivacyRepository()
+    }
     val vm: CalendarViewModel = viewModel(
         key = "calendar-${System.identityHashCode(db)}",
-        factory = simpleFactory { CalendarViewModel(db, widgetUpdater) },
+        factory = simpleFactory {
+            CalendarViewModel(db, widgetUpdater, userPrivacyRepository)
+        },
     )
     val logVm: LogViewModel = viewModel(
         key = "log-${System.identityHashCode(db)}",
@@ -334,6 +343,7 @@ private fun SettingsRoute(appViewModel: AppViewModel, db: TidesDatabase, nav: Na
         onLock = { appViewModel.lock() },
         appStateIsUnlocked = appState is AppState.Unlocked || appState is AppState.UnlockedDecoy,
         onBiometric = { nav.navigate(Routes.SettingsBiometric) },
+        onBirthControl = { nav.navigate(Routes.SettingsBirthControl) },
     )
 }
 
@@ -460,6 +470,22 @@ private fun BiometricRoute() {
         onDisable = vm::disable,
         onDismissStatus = vm::clearStatus,
     )
+}
+
+@Composable
+private fun BirthControlRoute(db: TidesDatabase) {
+    val ctx = LocalContext.current
+    val ep = remember {
+        EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
+    }
+    val vm: BirthControlViewModel = viewModel(
+        key = "bc-${System.identityHashCode(db)}",
+        factory = simpleFactory {
+            BirthControlViewModel(db, ep.userPrivacyRepository())
+        },
+    )
+    val s by vm.state.collectAsStateWithLifecycle()
+    BirthControlScreen(state = s, onSelect = vm::select, onSave = vm::save)
 }
 
 private fun ThreatPreset.label(): String = when (this) {

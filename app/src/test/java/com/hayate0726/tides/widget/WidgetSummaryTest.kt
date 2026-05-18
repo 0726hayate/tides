@@ -67,6 +67,39 @@ class WidgetSummaryTest {
         assertEquals(0, WidgetSummary.computeCycleDay(LocalDate.parse("2026-05-10"), cycles))
     }
 
+    @Test
+    fun v2_round_trip_preserves_all_fields() {
+        val f = tmp.newFile("v2.bin")
+        val snap = WidgetSummary.Snapshot(
+            cycleDay = 12,
+            updatedAtEpochMs = 1_730_000_000_000L,
+            predictedPeriodStartEpochDay = 20_241L,
+            showOvulation = true,
+            ovulationDateEpochDay = 20_230L,
+        )
+        WidgetSummary.writeTo(f, snap)
+        assertEquals(snap, WidgetSummary.readFrom(f))
+    }
+
+    @Test
+    fun v1_blob_still_readable_with_nulled_v2_fields() {
+        // Synthesize a v1 blob by hand (17 bytes).
+        val f = tmp.newFile("v1.bin")
+        val buf = java.nio.ByteBuffer.allocate(17).order(java.nio.ByteOrder.BIG_ENDIAN)
+        buf.put("TWGT".toByteArray())
+        buf.put(0x01.toByte())
+        buf.putInt(9)
+        buf.putLong(1_730_000_000_000L)
+        f.writeBytes(buf.array())
+
+        val snap = WidgetSummary.readFrom(f)!!
+        assertEquals(9, snap.cycleDay)
+        assertEquals(1_730_000_000_000L, snap.updatedAtEpochMs)
+        assertEquals(null, snap.predictedPeriodStartEpochDay)
+        assertEquals(false, snap.showOvulation)
+        assertEquals(null, snap.ovulationDateEpochDay)
+    }
+
     private fun detectFrom(periodStartDates: List<String>): List<Cycle> {
         val entries = periodStartDates.map {
             CycleDetector.Entry(LocalDate.parse(it), FlowIntensity.MEDIUM)
