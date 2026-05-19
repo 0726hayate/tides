@@ -2,13 +2,39 @@
 
 An offline-first period tracker for Android. Free, open source, no accounts, no telemetry, no network.
 
-**Status:** in development. v0.1.0-dev. Not yet ready for users.
+**Status:** v1.0.0 released — May 2026. [Download here](https://github.com/0726hayate/tides/releases/latest).
 
 ## About
 
 Tides started as something I built for my girlfriend, who wanted to track her cycle without sending her data anywhere. After looking at what was on the market, we couldn't find an option that actually respected privacy — most apps either sold the data, kept it in someone else's cloud, or both. So I built one that doesn't.
 
 I'm sharing it because anyone should be able to track their cycle without becoming a product. Tides is free, open-source, runs entirely on your device, and will never collect anything from you.
+
+## Install
+
+Tides is distributed as a signed APK directly through GitHub Releases — no app store account needed.
+
+### Option 1: Direct download (one-time install)
+
+1. On your Android phone, open <https://github.com/0726hayate/tides/releases/latest>
+2. Tap the `tides-X.Y.Z.apk` asset to download it
+3. When Android asks, allow installation from this source (this is a one-time per-source permission on Android 8+)
+4. Tap the downloaded file to install
+
+You can verify the download independently: each release is signed with the same key, and the signing certificate's SHA-256 fingerprint is published in the release notes. Mismatched signatures will prevent install — that's intended.
+
+### Option 2: Obtainium (recommended for auto-updates)
+
+[Obtainium](https://github.com/ImranR98/Obtainium) is a free Android app that tracks GitHub Releases and prompts you when new versions are available. It's the closest thing to an "app store" experience for apps distributed outside Play Store.
+
+1. Install Obtainium (also from a GitHub Release)
+2. In Obtainium, tap "Add App"
+3. Paste this URL: `https://github.com/0726hayate/tides`
+4. Obtainium will detect new Tides releases automatically and let you install updates with one tap
+
+### Option 3: F-Droid
+
+(Coming — pending inclusion in F-Droid's catalog. Status: TBD.)
 
 ## What Tides is
 
