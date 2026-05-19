@@ -189,11 +189,13 @@ object SyntheticPersonas {
             periodLengthDays = DistParams(mean = 2.5, sd = 1.5, minClamp = 1, maxClamp = 5),
             anovulationRate = 1.0,
             symptomPrevalence = emptyMap(),
-            flowDistribution = mapOf(
-                FlowIntensity.SPOTTING to 0.6,
-                FlowIntensity.LIGHT to 0.3,
-                FlowIntensity.MEDIUM to 0.1,
-            ),
+            // Adjustment phase is modeled as pure spotting to test the
+            // hormonal-IUD spotting-floor assertion cleanly. Real adjustment
+            // phase has occasional LIGHT breakthrough too, but mixing those in
+            // here produces legitimately-detected short cycles between LIGHT
+            // events — that's a separate clinical-detector question handled
+            // by HORMONAL_IUD_SPOTTING_STEADY for the longer-gap case.
+            flowDistribution = mapOf(FlowIntensity.SPOTTING to 1.0),
             goals = setOf(Goal.TRACK_PERIOD),
             birthControl = BirthControlMethod.HORMONAL_IUD,
             bcStartedMonthsAgo = 3,
