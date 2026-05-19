@@ -2,7 +2,7 @@
 
 **Status:** Draft for implementation
 **Date:** 2026-05-18
-**Goal:** Catch edge-case bugs in Tides' prediction, suppression, and stats logic that pure-unit tests miss, by running the app against 21 realistic user personas drawn from published cycle research and clinical case reports. Hormonal IUD coverage is deliberately deep because it has the most distinct usage states (adjustment / amenorrhea / breakthrough spotting / low-dose) and requires the strongest privacy guarantees (ovulation suppression hard ON regardless of cycle appearance).
+**Goal:** Catch edge-case bugs in Tides' prediction, suppression, and stats logic that pure-unit tests miss, by running the app against 23 realistic user personas drawn from published cycle research and clinical case reports. Hormonal IUD coverage is deliberately deep because it has the most distinct usage states (adjustment / amenorrhea / breakthrough spotting / low-dose) and requires the strongest privacy guarantees (ovulation suppression hard ON regardless of cycle appearance).
 
 ## 1. Motivation
 
@@ -12,7 +12,7 @@ Tides' domain logic (`PhaseCalculator`, `CyclePredictor`, `CycleDetector`, `Figo
 
 A permanent instrumented test module in `app/src/androidTest/java/com/hayate0726/tides/validation/` that:
 
-- Defines 21 personas (13 generated from published distributions, 8 hand-transcribed from clinical case reports).
+- Defines 23 personas (15 generated from published distributions, 8 hand-transcribed from clinical case reports).
 - Runs each persona through the full app stack (DB → DAO → Repository → ViewModel → snapshot).
 - Asserts 6 universal behavioral properties per persona, plus 2 hormonal-IUD-conditional properties. (Widget-binary snapshot tests dropped — see §7.2.)
 - Runs on emulator via `connectedDebugAndroidTest`; runtime ~7 minutes.
@@ -29,7 +29,7 @@ Rejected alternatives:
 
 ## 4. Persona catalog
 
-Twenty-one personas across five groups (Group 4 expanded for hormonal-IUD depth):
+Twenty-three personas across five groups (Group 4 expanded for hormonal-IUD depth):
 
 ### Group 1 — Typical adult (3)
 | Id | Age | Cycle | Period | History | BC | Goals |
@@ -193,7 +193,7 @@ Opens ephemeral in-memory test DB with a fixed key, wires `UserPrivacyRepository
 
 ## 7. Tests
 
-### 7.1 `PersonaScenarioTest.kt` — 6 universal + 2 IUD-conditional assertions × 21 personas
+### 7.1 `PersonaScenarioTest.kt` — 6 universal + 2 IUD-conditional assertions × 23 personas
 
 ```kotlin
 @RunWith(Parameterized::class)
@@ -261,7 +261,7 @@ So the snapshot test class is dropped without coverage loss. Tracked as a design
 
 - New source package only; no new Gradle dependencies. Uses existing `androidx.test`, JUnit 4, Hilt testing, Room/SQLCipher.
 - Run target: `./gradlew :app:connectedDebugAndroidTest`.
-- Total runtime estimate: 21 personas × (6 universal + 2 IUD-conditional with ~4 actually-running) ≈ 130 test cases × ~3s warm-emulator overhead ≈ 7 minutes. Acceptable for nightly CI; tight for every-PR if PR builds become emulator-backed.
+- Total runtime estimate: 23 personas × 8 assertions = 184 instrumented test cases (37 Assume-skipped, 147 actually-running) × ~3s warm-emulator overhead ≈ 7 minutes. Acceptable for nightly CI; tight for every-PR if PR builds become emulator-backed.
 - Documentation:
   - `docs/superpowers/specs/research/2026-05-18-cycle-distributions.md` — research output, referenced by `PersonaCatalog` parameter choices.
   - `app/src/androidTest/java/com/hayate0726/tides/validation/README.md` — how to add a new persona.
@@ -270,7 +270,7 @@ So the snapshot test class is dropped without coverage loss. Tracked as a design
 
 1. **`docs(validation): cycle distribution research + clinical case sources`** — research doc + case-report sources surfaced. No code yet.
 2. **`feat(validation): PersonaGenerator + persona catalog`** — `PersonaSpec`, `PersonaGenerator`, `SyntheticPersonas` (12), `CaseReportPersonas` (6), `AllPersonas`. Compiles, no tests.
-3. **`test(validation): persona scenario suite (6 universal + 2 IUD-conditional × 21 personas)`** — `PersonaTestHarness`, `PersonaScenarioTest` with all eight property assertions.
+3. **`test(validation): persona scenario suite (6 universal + 2 IUD-conditional × 23 personas)`** — `PersonaTestHarness`, `PersonaScenarioTest` with all eight property assertions.
 4. **`docs: validation README`** — `app/src/androidTest/java/com/hayate0726/tides/validation/README.md` (snapshot tests dropped per §7.2; README still documents how to add a persona). May also include any incidental bug fixes the suite uncovers.
 
 ## 10. Non-goals

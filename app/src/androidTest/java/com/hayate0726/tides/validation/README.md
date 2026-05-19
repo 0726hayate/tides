@@ -1,20 +1,20 @@
 # Persona Validation Suite
 
-This package exercises Tides against 21 realistic user histories drawn from published cycle research (13 personas synthesized from distribution parameters) and clinical case reports (8 hand-transcribed personas). Tests run on emulator via:
+This package exercises Tides against 23 realistic user histories drawn from published cycle research (15 personas synthesized from distribution parameters) and clinical case reports (8 hand-transcribed personas). Tests run on emulator via:
 
 ```bash
 ./gradlew :app:connectedDebugAndroidTest \
     -Pandroid.testInstrumentationRunnerArguments.package=com.hayate0726.tides.validation
 ```
 
-Suite size: 21 personas × (6 universal + 2 hormonal-IUD-conditional) property assertions = 168 instrumented test cases, ~37 of which are `Assume`-skipped (the IUD-conditional ones for non-IUD personas).
+Suite size: 23 personas × (6 universal + 2 hormonal-IUD-conditional) property assertions = 184 instrumented test cases, 37 of which are `Assume`-skipped (the IUD-conditional ones for non-IUD personas) → 147 actually run.
 
 ## Files
 
 - `PersonaSpec.kt` — declarative spec shape (distribution params, BC, goals, trailing-amenorrhea pad).
 - `Persona.kt` — the realized history (cycle + symptom rows, BC, goals).
 - `PersonaGenerator.kt` — deterministic synthesis from spec + seed (log-normal cycle sampling, Box-Muller).
-- `SyntheticPersonas.kt` — 13 synthetic specs across 4 population groups (typical, irregular, life transitions, special — including 4 hormonal-IUD variants).
+- `SyntheticPersonas.kt` — 15 synthetic specs across 4 population groups (typical, irregular, life transitions, special — including 4 hormonal-IUD variants).
 - `CaseReportPersonas.kt` — 8 hand-built personas with citations to published case reports or ACOG bulletins.
 - `AllPersonas.kt` — the union, used by the `@Parameterized` test class.
 - `PersonaTestHarness.kt` — ephemeral test-DB lifecycle (open with persona data, close + cleanup).
