@@ -46,4 +46,12 @@ data class PersonaSpec(
     val bcStartedMonthsAgo: Int? = null,
     /** Probability a daily bleeding entry is dropped to simulate skipped logging. */
     val skipLogProbability: Double = 0.0,
+    /**
+     * Minimum days between the last sampled cycle start and `today`. The
+     * generator stops emitting cycles whose start lands within this window,
+     * which deterministically guarantees a "trailing amenorrhea gap" for
+     * personas that need to trigger the FIGO AMENORRHEA pattern (≥90d
+     * since last period start). Default 0 = no trailing pad.
+     */
+    val trailingAmenorrheaPadDays: Int = 0,
 )

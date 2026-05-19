@@ -32,8 +32,12 @@ object PersonaGenerator {
 
         val historyStart = today.minusMonths(spec.historyMonths.toLong())
         var cycleStart = historyStart
+        // Stop emitting once we'd land inside the trailing amenorrhea window.
+        // This is how SPECIAL_ATHLETE deterministically triggers FIGO
+        // AMENORRHEA (≥90d since last period start).
+        val cutoff = today.minusDays(spec.trailingAmenorrheaPadDays.toLong())
 
-        while (cycleStart.isBefore(today)) {
+        while (cycleStart.isBefore(cutoff)) {
             val cycleLen = sampleClamped(spec.cycleLengthDays, rng)
             val periodLen = sampleClamped(spec.periodLengthDays, rng).coerceAtMost(cycleLen - 1)
             val isAnovulatory = rng.nextDouble() < spec.anovulationRate

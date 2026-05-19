@@ -7,10 +7,14 @@ import com.hayate0726.tides.domain.model.Symptom
 
 object SyntheticPersonas {
 
+    // Typical (non-HMB) flow: HEAVY is rare. The FIGO HEAVY_FLOW pattern fires
+    // when HEAVY is logged in ≥2 cycles; a 5-day period with 20% HEAVY/day
+    // yields ~67% per-cycle HEAVY rate, which over 12-24 months guarantees
+    // misclassification. Drop HEAVY entirely from this distribution — the
+    // heavyFlow map covers HMB personas (COPPER_IUD).
     private val typicalFlow = mapOf(
-        FlowIntensity.LIGHT to 0.3,
-        FlowIntensity.MEDIUM to 0.5,
-        FlowIntensity.HEAVY to 0.2,
+        FlowIntensity.LIGHT to 0.4,
+        FlowIntensity.MEDIUM to 0.6,
     )
     private val lightFlow = mapOf(
         FlowIntensity.SPOTTING to 0.4,
@@ -60,7 +64,10 @@ object SyntheticPersonas {
             populationSegment = PopulationSegment.TYPICAL,
             age = 35,
             historyMonths = 24,
-            cycleLengthDays = DistParams(mean = 29.0, sd = 3.0, minClamp = 24, maxClamp = 35),
+            // sd 3 + clamp 24-35 yields max-min variation up to 11 days, which
+            // exceeds the FIGO CYCLE_IRREGULAR threshold (>7d). Tighten so a
+            // "typical 35yo" stays within the regularity band.
+            cycleLengthDays = DistParams(mean = 29.0, sd = 1.8, minClamp = 26, maxClamp = 32),
             periodLengthDays = DistParams(mean = 4.5, sd = 1.0, minClamp = 3, maxClamp = 7),
             anovulationRate = 0.1,
             symptomPrevalence = mildSymptoms,
@@ -267,6 +274,9 @@ object SyntheticPersonas {
             flowDistribution = lightFlow,
             goals = setOf(Goal.TRACK_PERIOD),
             birthControl = null,
+            // Deterministic ≥100d trailing gap → reliably triggers FIGO
+            // AMENORRHEA (threshold is ≥90d since last period start).
+            trailingAmenorrheaPadDays = 100,
         ),
     )
 }
