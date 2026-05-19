@@ -258,8 +258,10 @@ private suspend fun shareDoctorPdf(
     val to = java.time.LocalDate.now()
     val from = range.months?.let { to.minusMonths(it.toLong()) } ?: java.time.LocalDate.of(2000, 1, 1)
     val entries = db.cycleEntryDao().rangeOnce(from, to)
+    val activeBc = db.birthControlDao().activeOnce()?.method
     val cycles = com.hayate0726.tides.domain.CycleDetector.detect(
-        entries.map { com.hayate0726.tides.domain.CycleDetector.Entry(it.date, it.flowIntensity) }
+        entries.map { com.hayate0726.tides.domain.CycleDetector.Entry(it.date, it.flowIntensity) },
+        activeBirthControl = activeBc,
     )
     val cycleStats = com.hayate0726.tides.domain.CycleStats.compute(cycles)
     val flowEntries = entries.map {
@@ -301,8 +303,10 @@ private suspend fun shareCsvExport(
     val to = java.time.LocalDate.now()
     val from = range.months?.let { to.minusMonths(it.toLong()) } ?: java.time.LocalDate.of(2000, 1, 1)
     val entries = db.cycleEntryDao().rangeOnce(from, to)
+    val activeBc = db.birthControlDao().activeOnce()?.method
     val cycles = com.hayate0726.tides.domain.CycleDetector.detect(
-        entries.map { com.hayate0726.tides.domain.CycleDetector.Entry(it.date, it.flowIntensity) }
+        entries.map { com.hayate0726.tides.domain.CycleDetector.Entry(it.date, it.flowIntensity) },
+        activeBirthControl = activeBc,
     )
     val symptomRows = db.symptomEntryDao().rangeOnce(from, to)
     val symptomsByDate: Map<java.time.LocalDate, List<com.hayate0726.tides.domain.model.Symptom>> =

@@ -47,8 +47,10 @@ class StatsViewModel(
             val from = _range.value.months?.let { to.minusMonths(it.toLong()) }
                 ?: LocalDate.of(2000, 1, 1)
             val entries = db.cycleEntryDao().rangeOnce(from, to)
+            val activeBc = db.birthControlDao().activeOnce()?.method
             val cycles = CycleDetector.detect(
-                entries.map { CycleDetector.Entry(it.date, it.flowIntensity) }
+                entries.map { CycleDetector.Entry(it.date, it.flowIntensity) },
+                activeBirthControl = activeBc,
             )
             val cycleStats = CycleStats.compute(cycles)
             val symptomRows = db.symptomEntryDao().rangeOnce(from, to)

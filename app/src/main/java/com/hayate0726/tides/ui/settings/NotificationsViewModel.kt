@@ -84,7 +84,11 @@ class NotificationsViewModel(
                 val end = LocalDate.now()
                 val start = end.minusYears(2)
                 val entries = db.cycleEntryDao().rangeOnce(start, end)
-                CycleDetector.detect(entries.map { CycleDetector.Entry(it.date, it.flowIntensity) })
+                val activeBc = db.birthControlDao().activeOnce()?.method
+                CycleDetector.detect(
+                    entries.map { CycleDetector.Entry(it.date, it.flowIntensity) },
+                    activeBirthControl = activeBc,
+                )
             }
             val presetName = withContext(Dispatchers.IO) {
                 db.settingsDao().get("threat_preset")

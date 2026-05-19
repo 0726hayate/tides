@@ -69,7 +69,8 @@ class BirthControlViewModel(
                 val to = YearMonth.now().atEndOfMonth().plusMonths(1)
                 val entries = db.cycleEntryDao().rangeOnce(from, to)
                 val cycles = CycleDetector.detect(
-                    entries.map { CycleDetector.Entry(it.date, it.flowIntensity) }
+                    entries.map { CycleDetector.Entry(it.date, it.flowIntensity) },
+                    activeBirthControl = _state.value.selected,
                 )
                 widgetUpdater.publish(
                     cycles = cycles,

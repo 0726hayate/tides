@@ -1,5 +1,6 @@
 package com.hayate0726.tides.domain
 
+import com.hayate0726.tides.domain.model.BirthControlMethod
 import com.hayate0726.tides.domain.model.Cycle
 import com.hayate0726.tides.domain.model.FlowIntensity
 import java.time.LocalDate
@@ -13,6 +14,10 @@ import java.time.temporal.ChronoUnit
  *  - A cycle starts on the first bleeding day after a gap of >=2 days without bleeding.
  *  - A period ends on the last consecutive bleeding day (allowing a one-day gap).
  *  - The most recent cycle is "active" (nextStart = null) until a new cycle starts.
+ *  - When the user is on a hormonal birth control method (PILL, HORMONAL_IUD,
+ *    IMPLANT, PATCH, RING), SPOTTING entries are treated as non-bleeding so
+ *    breakthrough spotting does not seed phantom short cycles. LIGHT/MEDIUM/
+ *    HEAVY flow continues to count as bleeding (withdrawal bleeds remain visible).
  */
 object CycleDetector {
 
@@ -21,8 +26,23 @@ object CycleDetector {
     /** Max allowed gap (days) within a single period — gaps longer split the period. */
     private const val MAX_INTRA_PERIOD_GAP_DAYS = 1L
 
-    fun detect(entries: List<Entry>): List<Cycle> {
-        val bleedingDays = entries
+    /**
+     * @param activeBirthControl the user's currently-active BC method, if known. When
+     *   the method is hormonal, SPOTTING entries are dropped before cycle detection
+     *   so breakthrough spotting on hormonal contraception does not generate phantom
+     *   cycles. Pass `null` when the BC context is unknown (preserves legacy behavior).
+     */
+    fun detect(
+        entries: List<Entry>,
+        activeBirthControl: BirthControlMethod? = null,
+    ): List<Cycle> {
+        val filteredEntries = if (activeBirthControl?.isHormonal == true) {
+            entries.filter { it.flow != FlowIntensity.SPOTTING }
+        } else {
+            entries
+        }
+
+        val bleedingDays = filteredEntries
             .asSequence()
             .filter { FlowIntensity.isBleeding(it.flow) }
             .map { it.date }

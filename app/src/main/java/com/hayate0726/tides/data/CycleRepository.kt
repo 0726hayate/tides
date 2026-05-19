@@ -24,8 +24,10 @@ class CycleRepository(
 
     suspend fun detectCycles(from: LocalDate, to: LocalDate): List<Cycle> {
         val entries = cycleEntryDao.rangeOnce(from, to)
+        val activeBc = birthControlDao.activeOnce()?.method
         return CycleDetector.detect(
-            entries.map { CycleDetector.Entry(it.date, it.flowIntensity) }
+            entries.map { CycleDetector.Entry(it.date, it.flowIntensity) },
+            activeBirthControl = activeBc,
         )
     }
 

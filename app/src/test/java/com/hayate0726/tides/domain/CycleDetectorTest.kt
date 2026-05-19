@@ -1,7 +1,9 @@
 package com.hayate0726.tides.domain
 
+import com.hayate0726.tides.domain.model.BirthControlMethod
 import com.hayate0726.tides.domain.model.FlowIntensity
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -88,6 +90,37 @@ class CycleDetectorTest {
         assertEquals(1, result.size)
         assertEquals(d("2026-05-02"), result.single().start)
         assertEquals(d("2026-05-04"), result.single().periodEnd)
+    }
+
+    @Test
+    fun `spotting on hormonal bc does not seed cycle`() {
+        // 5 spotting events 5 days apart — without filtering this would seed
+        // phantom short cycles. On hormonal BC, spotting must be ignored.
+        val entries = listOf(
+            entry("2026-05-01", FlowIntensity.SPOTTING),
+            entry("2026-05-06", FlowIntensity.SPOTTING),
+            entry("2026-05-11", FlowIntensity.SPOTTING),
+            entry("2026-05-16", FlowIntensity.SPOTTING),
+            entry("2026-05-21", FlowIntensity.SPOTTING),
+        )
+        val result = CycleDetector.detect(
+            entries,
+            activeBirthControl = BirthControlMethod.HORMONAL_IUD,
+        )
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `spotting without bc still seeds cycle`() {
+        val entries = listOf(
+            entry("2026-05-01", FlowIntensity.SPOTTING),
+            entry("2026-05-06", FlowIntensity.SPOTTING),
+            entry("2026-05-11", FlowIntensity.SPOTTING),
+            entry("2026-05-16", FlowIntensity.SPOTTING),
+            entry("2026-05-21", FlowIntensity.SPOTTING),
+        )
+        val result = CycleDetector.detect(entries, activeBirthControl = null)
+        assertFalse(result.isEmpty())
     }
 
     @Test
