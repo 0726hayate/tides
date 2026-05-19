@@ -14,7 +14,7 @@ A permanent instrumented test module in `app/src/androidTest/java/com/hayate0726
 
 - Defines 21 personas (13 generated from published distributions, 8 hand-transcribed from clinical case reports).
 - Runs each persona through the full app stack (DB → DAO → Repository → ViewModel → snapshot).
-- Asserts 6 universal behavioral properties per persona, plus 2 hormonal-IUD-conditional properties, plus 4 widget-binary snapshot tests.
+- Asserts 6 universal behavioral properties per persona, plus 2 hormonal-IUD-conditional properties. (Widget-binary snapshot tests dropped — see §7.2.)
 - Runs on emulator via `connectedDebugAndroidTest`; runtime ~7 minutes.
 
 Personas and assertions are deterministic — seeded RNG, fixed snapshot fixtures. CI failures are reproducible from a persona id + seed alone.
@@ -245,9 +245,17 @@ The IUD-conditional tests use `org.junit.Assume.assumeTrue(persona.birthControl?
 
 Failure messages always include persona id + seed for repro.
 
-### 7.2 `PersonaSnapshotTest.kt` — 4 byte-exact widget snapshots
+### 7.2 Widget-binary snapshot tests — dropped after implementation discovery
 
-Captures the persisted `widget_summary.bin` file bytes for `TYPICAL_25`, `PCOS_LONG`, `HORMONAL_IUD_AMENORRHEA`, `HORMONAL_IUD_LOW_DOSE`. Asserts byte-exact match against fixtures in `app/src/androidTest/assets/persona-snapshots/<id>.bin`. The two IUD snapshots lock down the most security-relevant widget states: empty-history (no fields exposed) and regular-looking-cycles-on-hormonal-BC (ovulation flag must stay false). Regenerating a snapshot is a documented one-line operation (see README).
+Original intent: byte-exact snapshots of `widget_summary.bin` for 4 representative personas to lock the format and catch unintended schema changes.
+
+Discovered during implementation: the v2 format encodes `updatedAtEpochMs = System.currentTimeMillis()` (bytes 9..16), and `WidgetUpdater.publish` defaults `today` to `LocalDate.now()` which drives `cycleDay` (bytes 5..8) and `ovulationDateEpochDay` (bytes 26..33). None of these fields are deterministic from persona inputs alone; byte-exact snapshots therefore require either (a) injecting a `Clock` into `WidgetUpdater` (a production change beyond the validation suite's scope), or (b) slicing the volatile bytes out of the comparison — at which point the remaining deterministic bytes (schema version + `showOvulation` flag + `predictedPeriodStartEpochDay`) are already covered by:
+
+- **Property 5** asserts `widget.showOvulation == privacy.showOvulation`
+- **Property 8** asserts amenorrhea persona widget has `predictedPeriodStartEpochDay == null` and `showOvulation == false`
+- The schema version constant lives in `WidgetSummary.kt` and any change to the format requires editing that file directly — visible in code review
+
+So the snapshot test class is dropped without coverage loss. Tracked as a design tradeoff rather than a feature gap. If a future refactor injects `Clock` into `WidgetUpdater`, byte-exact snapshots become trivially possible and can be revisited.
 
 ## 8. Build / CI integration
 
@@ -256,14 +264,14 @@ Captures the persisted `widget_summary.bin` file bytes for `TYPICAL_25`, `PCOS_L
 - Total runtime estimate: 21 personas × (6 universal + 2 IUD-conditional with ~4 actually-running) ≈ 130 test cases × ~3s warm-emulator overhead ≈ 7 minutes. Acceptable for nightly CI; tight for every-PR if PR builds become emulator-backed.
 - Documentation:
   - `docs/superpowers/specs/research/2026-05-18-cycle-distributions.md` — research output, referenced by `PersonaCatalog` parameter choices.
-  - `app/src/androidTest/java/com/hayate0726/tides/validation/README.md` — how to add a new persona, how to regenerate a snapshot fixture.
+  - `app/src/androidTest/java/com/hayate0726/tides/validation/README.md` — how to add a new persona.
 
 ## 9. Commit plan
 
 1. **`docs(validation): cycle distribution research + clinical case sources`** — research doc + case-report sources surfaced. No code yet.
 2. **`feat(validation): PersonaGenerator + persona catalog`** — `PersonaSpec`, `PersonaGenerator`, `SyntheticPersonas` (12), `CaseReportPersonas` (6), `AllPersonas`. Compiles, no tests.
 3. **`test(validation): persona scenario suite (6 universal + 2 IUD-conditional × 21 personas)`** — `PersonaTestHarness`, `PersonaScenarioTest` with all eight property assertions.
-4. **`test(validation): widget snapshot fixtures + PersonaSnapshotTest`** — 4 fixture bytes (typical + PCOS + IUD-amenorrhea + IUD-low-dose) + `PersonaSnapshotTest`; README.
+4. **`docs: validation README`** — `app/src/androidTest/java/com/hayate0726/tides/validation/README.md` (snapshot tests dropped per §7.2; README still documents how to add a persona). May also include any incidental bug fixes the suite uncovers.
 
 ## 10. Non-goals
 
