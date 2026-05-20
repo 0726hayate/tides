@@ -16,13 +16,15 @@ import androidx.compose.ui.graphics.Color
  */
 object TidesColors {
     // Light theme
-    val LightBackground = Color(0xFFFAF5EC)
-    val LightSurface = Color(0xFFEBE1CC)
-    val LightInk = Color(0xFF1D1B16)
-    val LightMutedInk = Color(0xFF6B6354)
-    val LightFaintInk = Color(0xFFC7BDA6)
-    val LightPeriodRed = Color(0xFFC25A3A)
-    val LightAccentInk = Color(0xFF87502D)
+    val LightBackground = Color(0xFFFDF6EA)
+    val LightSurface = Color(0xFFF6EAD2)
+    val LightSurfaceAlt = Color(0xFFE9DFD0)
+    val LightInk = Color(0xFF2D2418)
+    val LightMutedInk = Color(0xFF8A7A5E)
+    val LightFaintInk = Color(0xFFD0BFA1)
+    val LightDeepInk = Color(0xFF5A4A30)
+    val LightPeriodRed = Color(0xFFB04A3F)
+    val LightAccentInk = Color(0xFF8A3A30)
 
     // Dark theme
     val DarkBackground = Color(0xFF0A0A0A)
@@ -47,6 +49,7 @@ object TidesColors {
         error = LightPeriodRed,
         onError = LightBackground,
     )
+
 
     val DarkScheme: ColorScheme = darkColorScheme(
         primary = DarkInk,
