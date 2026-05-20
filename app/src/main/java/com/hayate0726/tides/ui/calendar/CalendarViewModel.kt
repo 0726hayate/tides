@@ -76,4 +76,14 @@ class CalendarViewModel(
     fun changeView(view: CalendarView) {
         _state.value = _state.value.copy(view = view)
     }
+
+    fun goToMonth(month: YearMonth) {
+        if (month == _state.value.month) return
+        _state.value = _state.value.copy(month = month)
+        refresh()
+    }
+
+    fun nextMonth() = goToMonth(_state.value.month.plusMonths(1))
+    fun previousMonth() = goToMonth(_state.value.month.minusMonths(1))
+    fun goToToday() = goToMonth(YearMonth.from(_state.value.today))
 }

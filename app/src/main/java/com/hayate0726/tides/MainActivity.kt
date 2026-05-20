@@ -2,11 +2,13 @@ package com.hayate0726.tides
 
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hayate0726.tides.ui.nav.TidesNavHost
 import com.hayate0726.tides.ui.settings.AppearanceRepository
+import com.hayate0726.tides.ui.settings.ThemeMode
 import com.hayate0726.tides.ui.theme.TidesTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -20,7 +22,13 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val useDynamic by appearanceRepository.useDynamicColor.collectAsStateWithLifecycle()
-            TidesTheme(useDynamicColor = useDynamic) {
+            val themeMode by appearanceRepository.themeMode.collectAsStateWithLifecycle()
+            val darkTheme = when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
+            TidesTheme(darkTheme = darkTheme, useDynamicColor = useDynamic) {
                 TidesNavHost()
             }
         }

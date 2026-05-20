@@ -178,6 +178,9 @@ private fun CalendarRoute(db: TidesDatabase) {
             pendingLogDate = it
             logVm.load(it)
         },
+        onPreviousMonth = vm::previousMonth,
+        onNextMonth = vm::nextMonth,
+        onGoToToday = vm::goToToday,
     )
 
     val openDate = pendingLogDate
@@ -572,11 +575,14 @@ private fun AppearanceRoute(nav: NavHostController) {
     }
     val repo = ep.appearanceRepository()
     val useDynamic by repo.useDynamicColor.collectAsStateWithLifecycle()
+    val themeMode by repo.themeMode.collectAsStateWithLifecycle()
     SubScreenScaffold("Appearance", nav) { p ->
         Box(modifier = Modifier.padding(p)) {
             AppearanceScreen(
+                themeMode = themeMode,
+                onThemeModeChange = repo::setThemeMode,
                 useDynamicColor = useDynamic,
-                onToggle = repo::setUseDynamicColor,
+                onToggleDynamicColor = repo::setUseDynamicColor,
             )
         }
     }
