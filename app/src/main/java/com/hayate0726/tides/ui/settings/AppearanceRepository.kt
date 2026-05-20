@@ -27,6 +27,14 @@ class AppearanceRepository @Inject constructor(
     private val _themeMode = MutableStateFlow(readThemeMode())
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
+    private val _shufflePinKeypad = MutableStateFlow(sp.getBoolean(KEY_SHUFFLE_PIN, false))
+    val shufflePinKeypad: StateFlow<Boolean> = _shufflePinKeypad.asStateFlow()
+
+    fun setShufflePinKeypad(v: Boolean) {
+        sp.edit().putBoolean(KEY_SHUFFLE_PIN, v).apply()
+        _shufflePinKeypad.value = v
+    }
+
     fun setUseDynamicColor(v: Boolean) {
         sp.edit().putBoolean(KEY_DYNAMIC, v).apply()
         _useDynamicColor.value = v
@@ -45,6 +53,7 @@ class AppearanceRepository @Inject constructor(
     companion object {
         private const val KEY_DYNAMIC = "use_dynamic_color"
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_SHUFFLE_PIN = "shuffle_pin_keypad"
     }
 }
 

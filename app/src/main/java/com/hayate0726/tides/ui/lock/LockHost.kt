@@ -23,6 +23,15 @@ fun LockHost(appViewModel: AppViewModel) {
     val appState by appViewModel.state.collectAsStateWithLifecycle()
 
     val ctx = LocalContext.current
+    val appearanceRepository = remember(ctx) {
+        dagger.hilt.android.EntryPointAccessors
+            .fromApplication(
+                ctx.applicationContext,
+                com.hayate0726.tides.ui.nav.MainGraphEntryPoint::class.java,
+            )
+            .appearanceRepository()
+    }
+    val useShuffled by appearanceRepository.shufflePinKeypad.collectAsStateWithLifecycle()
     val activity = ctx as? FragmentActivity
 
     val biometricAvailable = remember(activity) {
@@ -73,5 +82,6 @@ fun LockHost(appViewModel: AppViewModel) {
         onBiometric = if (biometricAvailable) ({ triggerBiometric() }) else null,
         error = appError ?: vmError,
         cooldownExpiryEpochMs = cooldownExpiryMs,
+        useShuffledKeypad = useShuffled,
     )
 }

@@ -26,6 +26,8 @@ fun AppearanceScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     useDynamicColor: Boolean,
     onToggleDynamicColor: (Boolean) -> Unit,
+    shufflePinKeypad: Boolean,
+    onToggleShufflePinKeypad: (Boolean) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
         Text("Theme", style = MaterialTheme.typography.titleMedium)
@@ -73,6 +75,30 @@ fun AppearanceScreen(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(
+                    value = shufflePinKeypad,
+                    onValueChange = onToggleShufflePinKeypad,
+                    role = Role.Switch,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Shuffle PIN keypad", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Randomizes the keypad layout on the lock screen to defeat " +
+                        "shoulder surfing and screen smudging. PIN setup is not shuffled.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = shufflePinKeypad, onCheckedChange = null)
+        }
     }
 }
 

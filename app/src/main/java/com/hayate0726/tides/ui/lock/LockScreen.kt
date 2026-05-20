@@ -36,6 +36,7 @@ fun LockScreen(
     onBiometric: (() -> Unit)?,
     error: String?,
     cooldownExpiryEpochMs: Long?,
+    useShuffledKeypad: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -68,7 +69,11 @@ fun LockScreen(
             Box(Modifier.size(0.dp, 24.dp))
 
             if (cooldownExpiryEpochMs == null) {
-                PinKeypad(onDigit = onDigit, onBackspace = onBackspace)
+                if (useShuffledKeypad) {
+                    ShuffledPinKeypad(onDigit = onDigit, onBackspace = onBackspace)
+                } else {
+                    PinKeypad(onDigit = onDigit, onBackspace = onBackspace)
+                }
             } else {
                 CooldownCountdown(cooldownExpiryEpochMs)
             }

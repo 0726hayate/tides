@@ -576,6 +576,7 @@ private fun AppearanceRoute(nav: NavHostController) {
     val repo = ep.appearanceRepository()
     val useDynamic by repo.useDynamicColor.collectAsStateWithLifecycle()
     val themeMode by repo.themeMode.collectAsStateWithLifecycle()
+    val shufflePin by repo.shufflePinKeypad.collectAsStateWithLifecycle()
     SubScreenScaffold("Appearance", nav) { p ->
         Box(modifier = Modifier.padding(p)) {
             AppearanceScreen(
@@ -583,6 +584,8 @@ private fun AppearanceRoute(nav: NavHostController) {
                 onThemeModeChange = repo::setThemeMode,
                 useDynamicColor = useDynamic,
                 onToggleDynamicColor = repo::setUseDynamicColor,
+                shufflePinKeypad = shufflePin,
+                onToggleShufflePinKeypad = repo::setShufflePinKeypad,
             )
         }
     }
