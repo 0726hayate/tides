@@ -10,7 +10,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
@@ -52,6 +56,7 @@ fun StatsScreen(
 ) {
     var showDetails by remember { mutableStateOf(false) }
     var infoText by remember { mutableStateOf<String?>(null) }
+    var infoSheet by remember { mutableStateOf<SheetCopy?>(null) }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
         Text("Insights", style = MaterialTheme.typography.headlineLarge)
@@ -71,7 +76,11 @@ fun StatsScreen(
         Spacer(Modifier.size(20.dp))
 
         if (state.insight != null) {
-            InsightCard(text = state.insight, onDismiss = onDismissInsight)
+            InsightCard(
+                text = state.insight,
+                onDismiss = onDismissInsight,
+                onInfoClick = { infoSheet = StatsInfoCopy.insightCard },
+            )
             Spacer(Modifier.size(20.dp))
         }
 
@@ -104,16 +113,25 @@ fun StatsScreen(
             TextButton(onClick = { infoText = INFO_REGULARITY }) {
                 Text("What does this mean?", style = MaterialTheme.typography.labelSmall)
             }
+            IconButton(onClick = { infoSheet = StatsInfoCopy.cycleLength }) {
+                Icon(Icons.Outlined.Info, contentDescription = "About cycle length")
+            }
         }
         Spacer(Modifier.size(10.dp))
         CycleLengthChart(values = state.cycleLengthsForChart, labels = state.cycleLengthLabels)
 
         Spacer(Modifier.size(20.dp))
-        Text(
-            "TOP SYMPTOMS",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "TOP SYMPTOMS",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = { infoSheet = StatsInfoCopy.symptomFrequency }) {
+                Icon(Icons.Outlined.Info, contentDescription = "About symptom frequency")
+            }
+        }
         SymptomFrequencyList(frequency = state.symptomFrequency)
 
         Spacer(Modifier.size(24.dp))
@@ -122,19 +140,31 @@ fun StatsScreen(
         }
         if (showDetails) {
             Spacer(Modifier.size(8.dp))
-            Text(
-                "PERIOD LENGTH",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "PERIOD LENGTH",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { infoSheet = StatsInfoCopy.periodLength }) {
+                    Icon(Icons.Outlined.Info, contentDescription = "About period length")
+                }
+            }
             Spacer(Modifier.size(6.dp))
             PeriodLengthTrend(values = state.periodLengthsForChart)
             Spacer(Modifier.size(20.dp))
-            Text(
-                "SYMPTOM HEATMAP",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "SYMPTOM HEATMAP",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(onClick = { infoSheet = StatsInfoCopy.symptomHeatmap }) {
+                    Icon(Icons.Outlined.Info, contentDescription = "About symptom heatmap")
+                }
+            }
             Spacer(Modifier.size(6.dp))
             SymptomHeatmap(heatmap = state.symptomHeatmap)
         }
@@ -162,6 +192,10 @@ fun StatsScreen(
             confirmButton = { TextButton(onClick = { infoText = null }) { Text("OK") } },
             text = { Text(it) },
         )
+    }
+
+    infoSheet?.let { copy ->
+        StatsInfoSheet(copy = copy, onDismiss = { infoSheet = null })
     }
 }
 
