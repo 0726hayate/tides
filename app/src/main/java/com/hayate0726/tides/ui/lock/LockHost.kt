@@ -12,6 +12,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hayate0726.tides.AppState
 import com.hayate0726.tides.AppViewModel
+import com.hayate0726.tides.ui.nav.MainGraphEntryPoint
+import dagger.hilt.android.EntryPointAccessors
 
 @Composable
 fun LockHost(appViewModel: AppViewModel) {
@@ -24,11 +26,8 @@ fun LockHost(appViewModel: AppViewModel) {
 
     val ctx = LocalContext.current
     val appearanceRepository = remember(ctx) {
-        dagger.hilt.android.EntryPointAccessors
-            .fromApplication(
-                ctx.applicationContext,
-                com.hayate0726.tides.ui.nav.MainGraphEntryPoint::class.java,
-            )
+        EntryPointAccessors
+            .fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
             .appearanceRepository()
     }
     val useShuffled by appearanceRepository.shufflePinKeypad.collectAsStateWithLifecycle()

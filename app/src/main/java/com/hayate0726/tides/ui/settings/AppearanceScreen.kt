@@ -79,17 +79,18 @@ fun AppearanceScreen(
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
         Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
                 .toggleable(
                     value = shufflePinKeypad,
-                    onValueChange = onToggleShufflePinKeypad,
                     role = Role.Switch,
-                ),
-            verticalAlignment = Alignment.CenterVertically,
+                    onValueChange = onToggleShufflePinKeypad,
+                )
+                .padding(vertical = 12.dp),
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Shuffle PIN keypad", style = MaterialTheme.typography.titleMedium)
+                Text("Shuffle PIN keypad", style = MaterialTheme.typography.bodyLarge)
                 Text(
                     "Randomizes the keypad layout on the lock screen to defeat " +
                         "shoulder surfing and screen smudging. PIN setup is not shuffled.",
