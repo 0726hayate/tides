@@ -38,15 +38,17 @@ private val ONBOARDING_SYMPTOM_CHIPS: List<Symptom> = listOf(
     Symptom.CRAVINGS,
 )
 
+// Labels chosen to match SymptomPicker (the full log sheet) so a user
+// who sees "Fatigue" in onboarding sees "Fatigue" later, not "Tired".
 private fun Symptom.label(): String = when (this) {
     Symptom.CRAMPS -> "Cramps"
     Symptom.HEADACHE -> "Headache"
-    Symptom.BREAST_TENDERNESS -> "Breast tenderness"
+    Symptom.BREAST_TENDERNESS -> "Tender breasts"
     Symptom.BLOATING -> "Bloating"
     Symptom.ACNE -> "Acne"
     Symptom.IRRITABLE -> "Irritable"
     Symptom.SAD -> "Sad"
-    Symptom.TIRED -> "Tired"
+    Symptom.TIRED -> "Fatigue"
     Symptom.CRAVINGS -> "Cravings"
     else -> name.lowercase().replaceFirstChar { it.uppercase() }
 }
@@ -55,7 +57,7 @@ private fun Symptom.label(): String = when (this) {
 @Composable
 fun FlowSymptomsScreen(
     onSave: (FlowIntensity, Set<Symptom>) -> Unit,
-    onSkipRest: (FlowIntensity) -> Unit,
+    onSkipRest: (FlowIntensity, Set<Symptom>) -> Unit,
 ) {
     var flow by remember { mutableStateOf<FlowIntensity?>(null) }
     var selected by remember { mutableStateOf<Set<Symptom>>(emptySet()) }
@@ -117,7 +119,7 @@ fun FlowSymptomsScreen(
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
-                onClick = { flow?.let(onSkipRest) },
+                onClick = { flow?.let { onSkipRest(it, emptySet()) } },
                 enabled = flow != null,
                 modifier = Modifier.weight(1f),
             ) { Text("Skip the rest") }

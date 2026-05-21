@@ -113,9 +113,9 @@ fun NavGraphBuilder.onboardingNavGraph(
                     vm.complete()
                     nav.navigate(Routes.OnboardingCompleteRoute)
                 },
-                onSkipRest = { flow ->
+                onSkipRest = { flow, symptoms ->
                     vm.setFlow(flow)
-                    vm.setSymptoms(emptySet())
+                    vm.setSymptoms(symptoms)
                     vm.complete()
                     nav.navigate(Routes.OnboardingCompleteRoute)
                 },
