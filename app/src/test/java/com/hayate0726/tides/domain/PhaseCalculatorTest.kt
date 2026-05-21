@@ -167,4 +167,54 @@ class PhaseCalculatorTest {
         )
         assertNull(result)
     }
+
+    @Test
+    fun `assumeCycleLength 28 with single active cycle returns ovulation window day 12-16`() {
+        val active = cycle("2026-05-01", "2026-05-04", null)
+        val result = PhaseCalculator.compute(
+            cycles = listOf(active),
+            today = LocalDate.parse("2026-05-01"),
+            birthControl = nonHormonal,
+            goals = ovulationGoals,
+            assumeCycleLength = 28,
+        )
+        assertEquals(LocalDate.parse("2026-05-12"), result?.ovulationWindow?.start)
+        assertEquals(LocalDate.parse("2026-05-16"), result?.ovulationWindow?.end)
+    }
+
+    @Test
+    fun `assumeCycleLength 40 returns null (outside trust band)`() {
+        val active = cycle("2026-05-01", "2026-05-04", null)
+        val result = PhaseCalculator.compute(
+            cycles = listOf(active),
+            today = LocalDate.parse("2026-05-01"),
+            birthControl = nonHormonal,
+            goals = ovulationGoals,
+            assumeCycleLength = 40,
+        )
+        assertNull(result)
+    }
+
+    @Test
+    fun `assumeCycleLength is ignored when completed cycles exist`() {
+        val cycles = listOf(
+            cycle("2026-03-01", "2026-03-04", "2026-03-29"),
+            cycle("2026-03-29", "2026-04-01", "2026-04-26"),
+            cycle("2026-04-26", "2026-04-29", null),
+        )
+        val ignoring = PhaseCalculator.compute(
+            cycles = cycles,
+            today = LocalDate.parse("2026-05-01"),
+            birthControl = nonHormonal,
+            goals = ovulationGoals,
+            assumeCycleLength = 35,
+        )
+        val baseline = PhaseCalculator.compute(
+            cycles = cycles,
+            today = LocalDate.parse("2026-05-01"),
+            birthControl = nonHormonal,
+            goals = ovulationGoals,
+        )
+        assertEquals(baseline?.ovulationWindow, ignoring?.ovulationWindow)
+    }
 }

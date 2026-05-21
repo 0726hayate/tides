@@ -15,6 +15,8 @@ import com.hayate0726.tides.ui.onboarding.BiometricSetupScreen
 import com.hayate0726.tides.ui.onboarding.GoalsScreen
 import com.hayate0726.tides.ui.onboarding.FlowSymptomsScreen
 import com.hayate0726.tides.ui.onboarding.LastPeriodScreen
+import com.hayate0726.tides.ui.onboarding.PredictionPreviewScreen
+import com.hayate0726.tides.ui.onboarding.PredictionPreviewViewModel
 import com.hayate0726.tides.ui.onboarding.OnboardingComplete
 import com.hayate0726.tides.ui.onboarding.OnboardingStep
 import com.hayate0726.tides.ui.onboarding.OnboardingViewModel
@@ -42,9 +44,9 @@ fun NavGraphBuilder.onboardingNavGraph(
                         OnboardingStep.THREAT -> Routes.ThreatPreset
                         OnboardingStep.LAST_PERIOD -> Routes.LastPeriod
                         OnboardingStep.FLOW_SYMPTOMS -> Routes.FlowSymptoms
+                        OnboardingStep.PREDICTION -> Routes.Prediction
                         OnboardingStep.WELCOME,
-                        OnboardingStep.COMPLETE,
-                        OnboardingStep.PREDICTION -> Routes.Goals  // safe fallback until Task 6
+                        OnboardingStep.COMPLETE -> Routes.Goals
                     }
                     nav.navigate(targetRoute)
                 },
@@ -110,12 +112,39 @@ fun NavGraphBuilder.onboardingNavGraph(
                 onSave = { flow, symptoms ->
                     vm.setFlow(flow)
                     vm.setSymptoms(symptoms)
-                    vm.complete()
-                    nav.navigate(Routes.OnboardingCompleteRoute)
+                    nav.navigate(Routes.Prediction)
                 },
                 onSkipRest = { flow, symptoms ->
                     vm.setFlow(flow)
                     vm.setSymptoms(symptoms)
+                    nav.navigate(Routes.Prediction)
+                },
+            )
+        }
+        composable(Routes.Prediction) {
+            val vm = sharedOnboardingVm(nav) ?: return@composable
+            val draft by vm.draft.collectAsStateWithLifecycle()
+            val lastPeriodStart = draft.lastPeriodStart
+            if (lastPeriodStart == null) {
+                LaunchedEffect(Unit) {
+                    vm.complete()
+                    nav.navigate(Routes.OnboardingCompleteRoute)
+                }
+                return@composable
+            }
+            val state = remember(lastPeriodStart, draft.goals, draft.birthControl) {
+                PredictionPreviewViewModel.compute(
+                    lastPeriodStart = lastPeriodStart,
+                    goals = draft.goals,
+                    birthControl = draft.birthControl,
+                )
+            }
+            PredictionPreviewScreen(
+                state = state,
+                onEdit = {
+                    nav.popBackStack(Routes.LastPeriod, inclusive = false)
+                },
+                onConfirm = {
                     vm.complete()
                     nav.navigate(Routes.OnboardingCompleteRoute)
                 },

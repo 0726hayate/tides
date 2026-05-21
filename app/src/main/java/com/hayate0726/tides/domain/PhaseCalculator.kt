@@ -19,6 +19,8 @@ import java.time.temporal.ChronoUnit
  *  - The personal median cycle length is outside 21..35 days, where the
  *    fixed-luteal heuristic below is least reliable (per FSRH guidance and
  *    Henry et al. 2024 Hum Reprod showing luteal-phase variation).
+ *  - `assumeCycleLength` (optional) provides a fallback median length when no
+ *    completed cycles exist yet. Used by the onboarding prediction preview.
  *
  * Ovulation estimate:
  *   ovulationDay = medianCycleLength - LUTEAL_PHASE_DAYS  (clinical fixed-luteal)
@@ -54,6 +56,7 @@ object PhaseCalculator {
         today: LocalDate,
         birthControl: BirthControlMethod,
         goals: Set<Goal>,
+        assumeCycleLength: Int? = null,
     ): Result? {
         require(cycles.zipWithNext().all { (a, b) -> !b.start.isBefore(a.start) }) {
             "cycles must be sorted ascending by start"
@@ -63,9 +66,11 @@ object PhaseCalculator {
 
         val active = cycles.firstOrNull { it.isActive } ?: return null
         val completedLengths = cycles.filter { !it.isActive }.mapNotNull { it.length }
-        if (completedLengths.isEmpty()) return null
-
-        val medianLength = lowMedian(completedLengths)
+        val medianLength = when {
+            completedLengths.isNotEmpty() -> lowMedian(completedLengths)
+            assumeCycleLength != null -> assumeCycleLength
+            else -> return null
+        }
         if (medianLength !in MIN_TRUSTED_CYCLE_LENGTH..MAX_TRUSTED_CYCLE_LENGTH) return null
 
         val ovulationDayOfCycle = medianLength - LUTEAL_PHASE_DAYS
@@ -90,7 +95,11 @@ object PhaseCalculator {
 
         val ovStart = active.start.plusDays((ovulationDayOfCycle - OVULATION_WINDOW_HALF_WIDTH - 1).toLong())
         val ovEnd = active.start.plusDays((ovulationDayOfCycle + OVULATION_WINDOW_HALF_WIDTH - 1).toLong())
-        val confidence = confidenceFromHistory(completedLengths.size)
+        val confidence = if (completedLengths.isEmpty()) {
+            PredictionRange.Confidence.LOW
+        } else {
+            confidenceFromHistory(completedLengths.size)
+        }
         return Result(
             currentPhase = phase,
             ovulationWindow = PredictionRange(start = ovStart, end = ovEnd, confidence = confidence),

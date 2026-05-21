@@ -9,6 +9,7 @@ object Routes {
     const val ThreatPreset = "onboarding/threat"
     const val LastPeriod = "onboarding/last_period"
     const val FlowSymptoms = "onboarding/flow_symptoms"
+    const val Prediction = "onboarding/prediction"
     const val OnboardingCompleteRoute = "onboarding/complete"
 
     const val Lock = "lock"
