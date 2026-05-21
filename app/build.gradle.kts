@@ -112,6 +112,7 @@ dependencies {
 
     implementation(libs.sqlcipher)
     implementation(libs.argon2kt)
+    implementation(libs.jsoup)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
