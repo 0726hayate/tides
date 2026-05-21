@@ -35,14 +35,35 @@ class SamsungHealthHtmlImporterTest {
     }
 
     @Test
-    fun all_flow_values_are_within_FlowIntensity_enum() = runTest {
+    fun all_entries_have_flow_LIGHT() = runTest {
+        // Samsung's "Share data" HTML doesn't carry per-day intensity, so the
+        // parser emits LIGHT as a "period present" baseline. This pins that
+        // contract so a future change must update both code and test.
         val result = importer.parse(loadFixture("samsung_health_period.html"))
         for (entry in result.entries) {
-            assertTrue(
-                entry.flow == null || entry.flow in FlowIntensity.entries,
-                "Unexpected flow: ${entry.flow}"
+            assertEquals(
+                FlowIntensity.LIGHT,
+                entry.flow,
+                "Samsung parser should emit LIGHT for every entry, got ${entry.flow} on ${entry.date}",
             )
         }
+    }
+
+    @Test
+    fun warns_when_no_period_column_found_in_tables() = runTest {
+        // Simulates a non-English Samsung export: tables present but none has
+        // a "Period" header. We surface a warning so the user gets a clue.
+        val html = """
+            <html><body>
+              <table>
+                <tr><td>Cycle length</td><td>Bleeding period</td></tr>
+                <tr><td>28 days</td><td>Apr 1–5</td></tr>
+              </table>
+            </body></html>
+        """.trimIndent()
+        val result = importer.parse(html.byteInputStream())
+        assertTrue(result.entries.isEmpty())
+        assertTrue(result.warnings.any { it.contains("Period", ignoreCase = true) })
     }
 
     @Test

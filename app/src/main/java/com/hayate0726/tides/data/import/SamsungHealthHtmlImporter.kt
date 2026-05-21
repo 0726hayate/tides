@@ -50,6 +50,7 @@ class SamsungHealthHtmlImporter : ImportSource {
         // background colour), not <th>. We identify the header row as the first
         // <tr> whose cells contain "Period" as one of the cell texts.
         val entries = mutableListOf<ImportedEntry>()
+        var sawPeriodTable = false
 
         for (table in doc.select("table")) {
             val rows = table.select("tr")
@@ -69,6 +70,7 @@ class SamsungHealthHtmlImporter : ImportSource {
             }
 
             if (periodColIdx < 0) continue // This table has no "Period" header
+            sawPeriodTable = true
 
             // Extract date ranges from the Period column of each data row.
             for (rowIdx in dataStartIdx until rows.size) {
@@ -138,6 +140,13 @@ class SamsungHealthHtmlImporter : ImportSource {
             .groupBy { it.date }
             .map { (_, v) -> v.first() }
             .sortedBy { it.date }
+
+        // Surface a warning if no recognized period table was found — likely a
+        // non-English export or a Samsung restyle. Empty entries without this
+        // warning would be misleading.
+        if (!sawPeriodTable && doc.select("table").isNotEmpty()) {
+            warnings += "No 'Period' column found in any table — file may be in a non-English locale or use an unsupported Samsung Health layout"
+        }
 
         return ParseResult(deduped, emptyList(), warnings)
     }
