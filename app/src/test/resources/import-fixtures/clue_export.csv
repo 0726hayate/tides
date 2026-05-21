@@ -1,0 +1,6 @@
+day,period,flow,cramps,headache,breast_tenderness,bloating,acne,fatigue,cravings,happy,sad,sensitive,note,exercise,sleep
+2026-04-01,true,medium,true,,true,,,true,true,,,,Heaviest morning,,
+2026-04-02,true,light,true,,,,,,,,,,,short run,
+2026-04-03,true,spotting,,,,,,,,,,,,,
+2026-04-15,,,,,,true,,,true,true,,,,yoga,8h
+2026-04-29,true,heavy,true,true,,,,true,,,true,,Tough day,,
