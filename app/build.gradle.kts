@@ -124,6 +124,8 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.test.ext.junit)
+    // Standalone org.json for unit tests (Android's org.json stubs are not mocked)
+    testImplementation("org.json:json:20231013")
 
     // Instrumented tests
     androidTestImplementation(libs.androidx.test.ext.junit)

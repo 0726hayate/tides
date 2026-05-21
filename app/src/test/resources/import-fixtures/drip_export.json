@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "cycles": [
+    {
+      "date": "2026-04-01",
+      "bleeding": { "value": 2, "exclude": false },
+      "pain": {
+        "cramps": { "value": 3, "exclude": false },
+        "headache": { "value": 1, "exclude": false }
+      },
+      "mood": {
+        "sad": { "value": 2, "exclude": false }
+      },
+      "note": { "value": "First day, rough morning" },
+      "temperature": { "value": 36.4, "exclude": false },
+      "mucus": { "value": 1, "exclude": false }
+    },
+    {
+      "date": "2026-04-02",
+      "bleeding": { "value": 1, "exclude": false },
+      "pain": {
+        "cramps": { "value": 1, "exclude": false }
+      },
+      "sex": { "solo": false, "partner": true, "protected": true }
+    },
+    {
+      "date": "2026-04-03",
+      "bleeding": { "value": 0, "exclude": false }
+    },
+    {
+      "date": "2026-04-29",
+      "bleeding": { "value": 3, "exclude": false },
+      "mood": {
+        "happy": { "value": 1, "exclude": false }
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "cycles": [
+    { "date": "2026-03-01", "bleeding": { "value": 2, "exclude": false } },
+    { "date": "2026-03-02", "bleeding": { "value": 1, "exclude": false } }
+  ]
+}
