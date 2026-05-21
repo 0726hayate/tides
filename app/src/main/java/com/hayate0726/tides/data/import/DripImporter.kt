@@ -16,29 +16,35 @@ class DripImporter : ImportSource {
     class EncryptedBackup(msg: String) : IOException(msg)
     class MalformedJson(msg: String, cause: Throwable? = null) : IOException(msg, cause)
 
-    private val PAIN_MAP: Map<String, Symptom> = mapOf(
-        "cramps" to Symptom.CRAMPS,
-        "headache" to Symptom.HEADACHE,
-        "backache" to Symptom.BACK_PAIN,
-        "breast_tenderness" to Symptom.BREAST_TENDERNESS,
-        "nausea" to Symptom.NAUSEA,
-    )
+    companion object {
+        private val PAIN_MAP: Map<String, Symptom> = mapOf(
+            "cramps" to Symptom.CRAMPS,
+            "headache" to Symptom.HEADACHE,
+            "backache" to Symptom.BACK_PAIN,
+            "breast_tenderness" to Symptom.BREAST_TENDERNESS,
+            "nausea" to Symptom.NAUSEA,
+        )
 
-    private val MOOD_MAP: Map<String, Symptom> = mapOf(
-        "happy" to Symptom.HAPPY,
-        "sad" to Symptom.SAD,
-        "anxious" to Symptom.ANXIOUS,
-        "irritable" to Symptom.IRRITABLE,
-        "calm" to Symptom.CALM,
-        "sensitive" to Symptom.SENSITIVE,
-    )
+        private val MOOD_MAP: Map<String, Symptom> = mapOf(
+            "happy" to Symptom.HAPPY,
+            "sad" to Symptom.SAD,
+            "anxious" to Symptom.ANXIOUS,
+            "irritable" to Symptom.IRRITABLE,
+            "calm" to Symptom.CALM,
+            "sensitive" to Symptom.SENSITIVE,
+        )
 
-    private val BODY_MAP: Map<String, Symptom> = mapOf(
-        "bloating" to Symptom.BLOATING,
-        "acne" to Symptom.ACNE,
-        "fatigue" to Symptom.TIRED,
-        "cravings" to Symptom.CRAVINGS,
-    )
+        private val BODY_MAP: Map<String, Symptom> = mapOf(
+            "bloating" to Symptom.BLOATING,
+            "acne" to Symptom.ACNE,
+            "fatigue" to Symptom.TIRED,
+            "cravings" to Symptom.CRAVINGS,
+        )
+
+        private val UNMAPPED_GROUPS = listOf("temperature", "mucus", "cervix", "sex", "desire")
+
+        private const val MIN_YEAR = 1900
+    }
 
     // drip bleeding intCode: 0 = "logged but no flow" -> null, 1 = SPOTTING,
     // 2 = LIGHT (drip's "medium" is closer to Tides' light per their UI scale),
@@ -70,8 +76,7 @@ class DripImporter : ImportSource {
         val entries = mutableListOf<ImportedEntry>()
         val unmappedCounts = mutableMapOf<String, Int>()
         val warnings = mutableListOf<String>()
-
-        val UNMAPPED_GROUPS = listOf("temperature", "mucus", "cervix", "sex", "desire")
+        val today = LocalDate.now()
 
         for (i in 0 until cyclesArr.length()) {
             val day = cyclesArr.optJSONObject(i) ?: continue
@@ -80,6 +85,10 @@ class DripImporter : ImportSource {
                 LocalDate.parse(dateStr)
             } catch (e: DateTimeParseException) {
                 warnings += "Unparseable date: $dateStr"
+                continue
+            }
+            if (date.year < MIN_YEAR || date.isAfter(today)) {
+                warnings += "Date out of range, skipping: $dateStr"
                 continue
             }
 

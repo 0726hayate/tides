@@ -123,4 +123,31 @@ class DripImporterTest {
         val result = importer.parse(json.byteInputStream())
         assertTrue(result.entries.first().symptoms.isEmpty())
     }
+
+    @Test
+    fun skips_dates_before_1900() = runTest {
+        val json = """
+            { "cycles": [
+                { "date": "1899-12-31", "bleeding": { "value": 2, "exclude": false } },
+                { "date": "1900-01-01", "bleeding": { "value": 2, "exclude": false } }
+            ] }
+        """.trimIndent()
+        val result = importer.parse(json.byteInputStream())
+        assertEquals(1, result.entries.size)
+        assertEquals(LocalDate.parse("1900-01-01"), result.entries.first().date)
+        assertTrue(result.warnings.any { it.contains("1899") })
+    }
+
+    @Test
+    fun skips_future_dates() = runTest {
+        val future = LocalDate.now().plusDays(7)
+        val json = """
+            { "cycles": [
+                { "date": "$future", "bleeding": { "value": 2, "exclude": false } }
+            ] }
+        """.trimIndent()
+        val result = importer.parse(json.byteInputStream())
+        assertTrue(result.entries.isEmpty())
+        assertTrue(result.warnings.any { it.contains(future.toString()) })
+    }
 }
