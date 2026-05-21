@@ -15,6 +15,7 @@ import com.hayate0726.tides.ui.onboarding.BiometricSetupScreen
 import com.hayate0726.tides.ui.onboarding.GoalsScreen
 import com.hayate0726.tides.ui.onboarding.LastPeriodScreen
 import com.hayate0726.tides.ui.onboarding.OnboardingComplete
+import com.hayate0726.tides.ui.onboarding.OnboardingStep
 import com.hayate0726.tides.ui.onboarding.OnboardingViewModel
 import com.hayate0726.tides.ui.onboarding.PinSetupScreen
 import com.hayate0726.tides.ui.onboarding.ThreatPresetScreen
@@ -26,7 +27,29 @@ fun NavGraphBuilder.onboardingNavGraph(
 ) {
     navigation(startDestination = Routes.Welcome, route = Routes.Onboarding) {
         composable(Routes.Welcome) {
-            WelcomeScreen(onContinue = { nav.navigate(Routes.Goals) })
+            val vm = sharedOnboardingVm(nav) ?: return@composable
+            val step by vm.currentStep.collectAsStateWithLifecycle()
+            val hasDraft = remember(step) { vm.draftStore.exists() }
+            WelcomeScreen(
+                hasDraft = hasDraft,
+                onResume = {
+                    vm.resumeFromDraft()
+                    val targetRoute = when (vm.currentStep.value) {
+                        OnboardingStep.GOALS -> Routes.Goals
+                        OnboardingStep.PIN -> Routes.PinSetup
+                        OnboardingStep.BIOMETRIC -> Routes.BiometricSetup
+                        OnboardingStep.THREAT -> Routes.ThreatPreset
+                        OnboardingStep.LAST_PERIOD -> Routes.LastPeriod
+                        OnboardingStep.WELCOME,
+                        OnboardingStep.COMPLETE,
+                        OnboardingStep.FLOW_SYMPTOMS,
+                        OnboardingStep.PREDICTION -> Routes.Goals  // safe fallback until Tasks 5/6
+                    }
+                    nav.navigate(targetRoute)
+                },
+                onStartOver = { vm.startFresh() },
+                onContinue = { nav.navigate(Routes.Goals) },
+            )
         }
         composable(Routes.Goals) {
             val vm = sharedOnboardingVm(nav) ?: return@composable

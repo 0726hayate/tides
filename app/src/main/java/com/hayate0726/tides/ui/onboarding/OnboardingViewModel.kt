@@ -18,6 +18,7 @@ import com.hayate0726.tides.domain.model.BirthControlMethod
 import com.hayate0726.tides.domain.model.FlowIntensity
 import com.hayate0726.tides.domain.model.Goal
 import com.hayate0726.tides.domain.model.ThreatPreset
+import com.hayate0726.tides.domain.model.Symptom
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +36,7 @@ class OnboardingViewModel @Inject constructor(
     @ApplicationContext private val ctx: Context,
     @CyclesDbFile private val dbFile: File,
     private val authMetaStore: FileAuthMetaStore,
+    internal val draftStore: OnboardingDraftStore,
 ) : ViewModel() {
 
     data class DraftState(
@@ -44,6 +46,8 @@ class OnboardingViewModel @Inject constructor(
         val threatPreset: ThreatPreset = ThreatPreset.DEFAULT,
         val birthControl: BirthControlMethod = BirthControlMethod.NONE,
         val lastPeriodStart: LocalDate? = null,
+        val flow: FlowIntensity? = null,
+        val symptoms: Set<Symptom> = emptySet(),
     ) {
         // CharArray's equals is identity-based; for the StateFlow change-detection
         // we want value semantics so re-emitting the same draft doesn't churn.
@@ -56,6 +60,8 @@ class OnboardingViewModel @Inject constructor(
             if (threatPreset != other.threatPreset) return false
             if (birthControl != other.birthControl) return false
             if (lastPeriodStart != other.lastPeriodStart) return false
+            if (flow != other.flow) return false
+            if (symptoms != other.symptoms) return false
             return true
         }
         override fun hashCode(): Int {
@@ -65,6 +71,8 @@ class OnboardingViewModel @Inject constructor(
             r = 31 * r + threatPreset.hashCode()
             r = 31 * r + birthControl.hashCode()
             r = 31 * r + (lastPeriodStart?.hashCode() ?: 0)
+            r = 31 * r + (flow?.hashCode() ?: 0)
+            r = 31 * r + symptoms.hashCode()
             return r
         }
     }
@@ -72,10 +80,37 @@ class OnboardingViewModel @Inject constructor(
     private val _draft = MutableStateFlow(DraftState())
     val draft: StateFlow<DraftState> = _draft.asStateFlow()
 
+    private val _currentStep = MutableStateFlow(OnboardingStep.WELCOME)
+    val currentStep: StateFlow<OnboardingStep> = _currentStep.asStateFlow()
+
     private val _completion = MutableStateFlow<TidesDatabase?>(null)
     val completion: StateFlow<TidesDatabase?> = _completion.asStateFlow()
 
-    fun setGoals(goals: Set<Goal>) { _draft.value = _draft.value.copy(goals = goals) }
+    private var saveJob: kotlinx.coroutines.Job? = null
+    private fun schedulePersist(step: OnboardingStep) {
+        _currentStep.value = step
+        saveJob?.cancel()
+        saveJob = viewModelScope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.delay(200)
+            val d = _draft.value
+            draftStore.save(
+                SafeDraft(
+                    goals = d.goals,
+                    birthControl = d.birthControl,
+                    biometricEnabled = d.biometricEnabled,
+                    lastPeriodStart = d.lastPeriodStart,
+                    flow = d.flow,
+                    symptoms = d.symptoms,
+                ),
+                step,
+            )
+        }
+    }
+
+    fun setGoals(goals: Set<Goal>) {
+        _draft.value = _draft.value.copy(goals = goals)
+        schedulePersist(OnboardingStep.PIN)
+    }
     fun setPin(pin: String) {
         val chars = pin.toCharArray()
         _draft.value = _draft.value.copy(pinChars = chars)
@@ -83,11 +118,43 @@ class OnboardingViewModel @Inject constructor(
         // discretion. We accept the residual String pool hit during PinSetupScreen
         // composition — eliminating it requires a custom text-input component,
         // out of scope for v1.0. Lifetime: until complete() runs and zeros chars.
+        // NEVER persist PIN material. Bump step but no save.
+        _currentStep.value = OnboardingStep.BIOMETRIC
     }
-    fun setBiometric(on: Boolean) { _draft.value = _draft.value.copy(biometricEnabled = on) }
-    fun setThreatPreset(p: ThreatPreset) { _draft.value = _draft.value.copy(threatPreset = p) }
+    fun setBiometric(on: Boolean) {
+        _draft.value = _draft.value.copy(biometricEnabled = on)
+        schedulePersist(OnboardingStep.THREAT)
+    }
+    fun setThreatPreset(p: ThreatPreset) {
+        _draft.value = _draft.value.copy(threatPreset = p)
+        // threatPreset deliberately not persisted — re-prompt on resume.
+        _currentStep.value = OnboardingStep.LAST_PERIOD
+    }
     fun setBc(m: BirthControlMethod) { _draft.value = _draft.value.copy(birthControl = m) }
-    fun setLastPeriodStart(d: LocalDate?) { _draft.value = _draft.value.copy(lastPeriodStart = d) }
+    fun setLastPeriodStart(d: LocalDate?) {
+        _draft.value = _draft.value.copy(lastPeriodStart = d)
+        schedulePersist(OnboardingStep.COMPLETE)
+    }
+
+    fun resumeFromDraft() {
+        val loaded = draftStore.load() ?: return
+        _draft.value = _draft.value.copy(
+            goals = loaded.first.goals,
+            birthControl = loaded.first.birthControl,
+            biometricEnabled = loaded.first.biometricEnabled,
+            lastPeriodStart = loaded.first.lastPeriodStart,
+            flow = loaded.first.flow,
+            symptoms = loaded.first.symptoms,
+            // threatPreset stays at the in-memory default — user re-prompts
+        )
+        _currentStep.value = loaded.second
+    }
+
+    fun startFresh() {
+        draftStore.clear()
+        _draft.value = DraftState()
+        _currentStep.value = OnboardingStep.WELCOME
+    }
 
     fun complete() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -149,6 +216,7 @@ class OnboardingViewModel @Inject constructor(
                 )
             }
             _completion.value = db
+            draftStore.clear()
         }
     }
 }

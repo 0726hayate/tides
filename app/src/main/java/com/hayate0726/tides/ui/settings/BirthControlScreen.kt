@@ -69,5 +69,6 @@ private fun label(m: BirthControlMethod) = when (m) {
     BirthControlMethod.IMPLANT -> "Implant"
     BirthControlMethod.PATCH -> "Patch"
     BirthControlMethod.RING -> "Ring"
+    BirthControlMethod.CONDOM -> "Condom"
     BirthControlMethod.OTHER -> "Other"
 }

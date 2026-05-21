@@ -8,5 +8,6 @@ enum class BirthControlMethod(val isHormonal: Boolean) {
     IMPLANT(isHormonal = true),
     PATCH(isHormonal = true),
     RING(isHormonal = true),
+    CONDOM(isHormonal = false),
     OTHER(isHormonal = false);
 }
