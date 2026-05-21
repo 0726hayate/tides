@@ -133,7 +133,17 @@ class OnboardingViewModel @Inject constructor(
     fun setBc(m: BirthControlMethod) { _draft.value = _draft.value.copy(birthControl = m) }
     fun setLastPeriodStart(d: LocalDate?) {
         _draft.value = _draft.value.copy(lastPeriodStart = d)
-        schedulePersist(OnboardingStep.COMPLETE)
+        schedulePersist(OnboardingStep.FLOW_SYMPTOMS)
+    }
+
+    fun setFlow(f: com.hayate0726.tides.domain.model.FlowIntensity) {
+        _draft.value = _draft.value.copy(flow = f)
+        schedulePersist(OnboardingStep.PREDICTION)
+    }
+
+    fun setSymptoms(s: Set<com.hayate0726.tides.domain.model.Symptom>) {
+        _draft.value = _draft.value.copy(symptoms = s)
+        schedulePersist(OnboardingStep.PREDICTION)
     }
 
     fun resumeFromDraft() {
@@ -205,15 +215,21 @@ class OnboardingViewModel @Inject constructor(
                 db.cycleEntryDao().upsert(
                     CycleEntryEntity(
                         date = lpd,
-                        // LIGHT is the minimal non-zero flow; user only confirmed a
-                        // start date during onboarding, not an intensity. They can
-                        // edit it later from the calendar. MEDIUM (the previous
-                        // hardcoded value) silently overstated their data.
-                        flowIntensity = FlowIntensity.LIGHT,
+                        flowIntensity = draft.flow ?: FlowIntensity.LIGHT,
                         painSeverity = null,
                         notes = null,
                     )
                 )
+                for (sym in draft.symptoms) {
+                    db.symptomEntryDao().insert(
+                        com.hayate0726.tides.data.entity.SymptomEntryEntity(
+                            date = lpd,
+                            symptom = sym,
+                            severity = 1,
+                            otherText = null,
+                        )
+                    )
+                }
             }
             _completion.value = db
             draftStore.clear()

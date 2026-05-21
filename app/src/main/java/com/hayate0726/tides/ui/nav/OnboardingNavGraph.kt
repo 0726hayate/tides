@@ -13,6 +13,7 @@ import androidx.navigation.compose.navigation
 import com.hayate0726.tides.data.TidesDatabase
 import com.hayate0726.tides.ui.onboarding.BiometricSetupScreen
 import com.hayate0726.tides.ui.onboarding.GoalsScreen
+import com.hayate0726.tides.ui.onboarding.FlowSymptomsScreen
 import com.hayate0726.tides.ui.onboarding.LastPeriodScreen
 import com.hayate0726.tides.ui.onboarding.OnboardingComplete
 import com.hayate0726.tides.ui.onboarding.OnboardingStep
@@ -40,10 +41,10 @@ fun NavGraphBuilder.onboardingNavGraph(
                         OnboardingStep.BIOMETRIC -> Routes.BiometricSetup
                         OnboardingStep.THREAT -> Routes.ThreatPreset
                         OnboardingStep.LAST_PERIOD -> Routes.LastPeriod
+                        OnboardingStep.FLOW_SYMPTOMS -> Routes.FlowSymptoms
                         OnboardingStep.WELCOME,
                         OnboardingStep.COMPLETE,
-                        OnboardingStep.FLOW_SYMPTOMS,
-                        OnboardingStep.PREDICTION -> Routes.Goals  // safe fallback until Tasks 5/6
+                        OnboardingStep.PREDICTION -> Routes.Goals  // safe fallback until Task 6
                     }
                     nav.navigate(targetRoute)
                 },
@@ -93,11 +94,32 @@ fun NavGraphBuilder.onboardingNavGraph(
         }
         composable(Routes.LastPeriod) {
             val vm = sharedOnboardingVm(nav) ?: return@composable
-            LastPeriodScreen(onFinish = {
-                vm.setLastPeriodStart(it)
-                vm.complete()
-                nav.navigate(Routes.OnboardingCompleteRoute)
+            LastPeriodScreen(onFinish = { date ->
+                vm.setLastPeriodStart(date)
+                if (date == null) {
+                    vm.complete()
+                    nav.navigate(Routes.OnboardingCompleteRoute)
+                } else {
+                    nav.navigate(Routes.FlowSymptoms)
+                }
             })
+        }
+        composable(Routes.FlowSymptoms) {
+            val vm = sharedOnboardingVm(nav) ?: return@composable
+            FlowSymptomsScreen(
+                onSave = { flow, symptoms ->
+                    vm.setFlow(flow)
+                    vm.setSymptoms(symptoms)
+                    vm.complete()
+                    nav.navigate(Routes.OnboardingCompleteRoute)
+                },
+                onSkipRest = { flow ->
+                    vm.setFlow(flow)
+                    vm.setSymptoms(emptySet())
+                    vm.complete()
+                    nav.navigate(Routes.OnboardingCompleteRoute)
+                },
+            )
         }
         composable(Routes.OnboardingCompleteRoute) {
             // Resolve the shared VM exactly once, on first composition, and
