@@ -11,15 +11,17 @@ object ImportFormatDetector {
     }
 
     private val PDF_MAGIC = byteArrayOf(0x25, 0x50, 0x44, 0x46)
+    private const val SNIFF_BYTES = 4096
 
     fun detect(bytes: ByteArray): Format {
         if (bytes.isEmpty()) return Format.UNKNOWN
 
-        if (bytes.size >= 4 && bytes.sliceArray(0..3).contentEquals(PDF_MAGIC)) {
+        if (bytes.size >= 4 && bytes.copyOfRange(0, 4).contentEquals(PDF_MAGIC)) {
             return Format.PDF
         }
 
-        val sample = String(bytes, 0, minOf(bytes.size, 4096), Charsets.UTF_8)
+        // 4 KB cut on a byte boundary is safe: all sniff tokens are ASCII.
+        val sample = String(bytes, 0, minOf(bytes.size, SNIFF_BYTES), Charsets.UTF_8)
         val lower = sample.lowercase()
 
         if (lower.contains("<!doctype html") && lower.contains("samsung health")) {

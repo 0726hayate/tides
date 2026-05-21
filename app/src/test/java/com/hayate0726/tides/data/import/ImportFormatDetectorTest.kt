@@ -39,4 +39,13 @@ class ImportFormatDetectorTest {
     fun returns_unknown_for_empty_input() {
         assertEquals(ImportFormatDetector.Format.UNKNOWN, ImportFormatDetector.detect(ByteArray(0)))
     }
+
+    @Test
+    fun json_with_commas_in_values_is_not_misdetected_as_clue_csv() {
+        // Regression guard: JSON check must run before CSV check so a JSON
+        // document whose first line contains 'date'/'period'/'flow' as keys
+        // (with commas separating fields) isn't classified as CSV.
+        val bytes = """{"date":"2026-01-01","period":true,"flow":"medium","cycles":[]}""".toByteArray()
+        assertEquals(ImportFormatDetector.Format.DRIP_JSON, ImportFormatDetector.detect(bytes))
+    }
 }
