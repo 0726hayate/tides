@@ -129,5 +129,7 @@ class ClueImporterTest {
         val result = importer.parse(csv.byteInputStream())
         assertEquals(1, result.entries.size)
         assertEquals(LocalDate.parse("1900-01-01"), result.entries.first().date)
+        assertTrue(result.warnings.any { it.contains("1899") })
+        assertTrue(result.warnings.any { it.contains(future.toString()) })
     }
 }
