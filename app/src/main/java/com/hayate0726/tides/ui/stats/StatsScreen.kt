@@ -110,9 +110,6 @@ fun StatsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = { infoText = INFO_REGULARITY }) {
-                Text("What does this mean?", style = MaterialTheme.typography.labelSmall)
-            }
             IconButton(onClick = { infoSheet = StatsInfoCopy.cycleLength }) {
                 Icon(Icons.Outlined.Info, contentDescription = "About cycle length")
             }
@@ -246,7 +243,3 @@ private const val INFO_AVG_CYCLE =
 private const val INFO_AVG_PERIOD =
     "Median number of bleeding days per cycle, across the selected range. " +
         "FIGO flags >8 days as prolonged."
-
-private const val INFO_REGULARITY =
-    "FIGO defines a cycle as irregular if the shortest-to-longest variation across cycles " +
-        "is more than 7 days."

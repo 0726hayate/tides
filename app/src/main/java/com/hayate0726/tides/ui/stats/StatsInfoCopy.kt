@@ -42,7 +42,7 @@ object StatsInfoCopy {
 
     val insightCard = SheetCopy(
         title = "About insights",
-        body = "Insights are observations from your data, not medical advice. They're " +
-            "generated locally on this device — nothing is uploaded.",
+        body = "Insights are observations from your data, not medical advice. " +
+            "They appear when there's enough history to suggest a pattern.",
     )
 }
