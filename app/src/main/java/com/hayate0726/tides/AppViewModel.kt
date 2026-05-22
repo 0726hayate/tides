@@ -75,7 +75,10 @@ class AppViewModel @Inject constructor(
                 _state.value = AppState.Locked
             }
             val ok = snap.restore()
-            _hasPreImportSnapshot.value = false
+            // On success the snapshot file was deleted; on failure it remains
+            // so the user can retry. Re-read disk state instead of unconditionally
+            // setting false.
+            _hasPreImportSnapshot.value = snap.exists()
             ok
         }
     }
