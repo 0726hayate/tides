@@ -35,6 +35,7 @@ fun SettingsScreen(
     onImport: () -> Unit,
     onRollback: () -> Unit,
     showRollback: Boolean,
+    onGoals: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -63,8 +64,12 @@ fun SettingsScreen(
         }
 
         Spacer(Modifier.size(20.dp))
-        SettingsSectionHeader("About")
+        SettingsSectionHeader("Preferences")
+        SettingsRow("Goals", onClick = onGoals)
         SettingsRow("Appearance", onClick = onAppearance)
+
+        Spacer(Modifier.size(20.dp))
+        SettingsSectionHeader("About")
         SettingsRow("Check for updates", onClick = onCheckUpdates)
         SettingsRow("Send feedback", onClick = onSendFeedback)
         SettingsRow("Support development (Ko-fi)", onClick = onSupportDevelopment)

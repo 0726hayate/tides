@@ -28,6 +28,7 @@ object Routes {
     const val SettingsBiometric = "main/settings/biometric"
     const val SettingsBirthControl = "main/settings/birth_control"
     const val SettingsAppearance = "main/settings/appearance"
+    const val SettingsGoals = "main/settings/goals"
 
     const val Import = "import"
     const val ImportPreview = "import/preview"

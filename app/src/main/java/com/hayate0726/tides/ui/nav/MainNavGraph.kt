@@ -119,6 +119,7 @@ fun MainScaffold(appViewModel: AppViewModel, db: TidesDatabase, rootNav: NavHost
             composable(Routes.SettingsBiometric) { BiometricRoute(nav) }
             composable(Routes.SettingsBirthControl) { BirthControlRoute(db, nav) }
             composable(Routes.SettingsAppearance) { AppearanceRoute(nav) }
+            composable(Routes.SettingsGoals) { GoalsEditorRoute(db, nav) }
         }
     }
 }
@@ -155,6 +156,11 @@ private fun CalendarRoute(db: TidesDatabase) {
     val ui by vm.state.collectAsStateWithLifecycle()
     val logState by logVm.state.collectAsStateWithLifecycle()
     var pendingLogDate by remember { mutableStateOf<java.time.LocalDate?>(null) }
+
+    // Re-read goals/BC/cycles whenever the Calendar tab regains focus, so
+    // changes made elsewhere (e.g., toggling AVOID_PREGNANCY in Settings →
+    // Goals) reflect immediately instead of requiring an app restart.
+    LaunchedEffect(Unit) { vm.refresh() }
 
     val periodDays = remember(ui.cycles) {
         ui.cycles.flatMap { c ->
@@ -370,6 +376,7 @@ private fun SettingsRoute(appViewModel: AppViewModel, db: TidesDatabase, nav: Na
         onBiometric = { nav.navigate(Routes.SettingsBiometric) },
         onBirthControl = { nav.navigate(Routes.SettingsBirthControl) },
         onAppearance = { nav.navigate(Routes.SettingsAppearance) },
+        onGoals = { nav.navigate(Routes.SettingsGoals) },
         onImport = { rootNav.navigate(Routes.Import) },
         onRollback = { showRollbackDialog = true },
         showRollback = hasSnapshot,
@@ -583,6 +590,33 @@ private fun BirthControlRoute(db: TidesDatabase, nav: NavHostController) {
     SubScreenScaffold("Birth control", nav) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             BirthControlScreen(state = s, onSelect = vm::select, onSave = vm::save)
+        }
+    }
+    LaunchedEffect(s.saved) {
+        if (s.saved) nav.popBackStack()
+    }
+}
+
+@Composable
+private fun GoalsEditorRoute(db: TidesDatabase, nav: NavHostController) {
+    val ctx = LocalContext.current
+    val ep = remember {
+        EntryPointAccessors.fromApplication(ctx.applicationContext, MainGraphEntryPoint::class.java)
+    }
+    val vm: com.hayate0726.tides.ui.settings.GoalsEditorViewModel = viewModel(
+        key = "goals-${System.identityHashCode(db)}",
+        factory = simpleFactory {
+            com.hayate0726.tides.ui.settings.GoalsEditorViewModel(db, ep.userPrivacyRepository())
+        },
+    )
+    val s by vm.state.collectAsStateWithLifecycle()
+    SubScreenScaffold("Goals", nav) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            com.hayate0726.tides.ui.settings.GoalsEditorScreen(
+                selected = s.selected,
+                onToggle = vm::toggle,
+                onSave = vm::save,
+            )
         }
     }
     LaunchedEffect(s.saved) {
