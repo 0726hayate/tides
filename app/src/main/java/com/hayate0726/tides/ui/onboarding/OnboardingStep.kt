@@ -14,6 +14,7 @@ enum class OnboardingStep {
     PIN,
     BIOMETRIC,
     THREAT,
+    BIRTH_CONTROL,
     IMPORT_PROMPT,
     LAST_PERIOD,
     FLOW_SYMPTOMS,

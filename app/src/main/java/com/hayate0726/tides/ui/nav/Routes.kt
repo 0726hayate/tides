@@ -7,6 +7,7 @@ object Routes {
     const val PinSetup = "onboarding/pin"
     const val BiometricSetup = "onboarding/biometric"
     const val ThreatPreset = "onboarding/threat"
+    const val OnboardingBirthControl = "onboarding/birth_control"
     const val OnboardingImportPrompt = "onboarding/import_prompt"
     const val LastPeriod = "onboarding/last_period"
     const val FlowSymptoms = "onboarding/flow_symptoms"

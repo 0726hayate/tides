@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] — 2026-05-22
+
+### Added
+- Birth control step in onboarding, between the privacy preset and the import prompt. You no longer have to find it in Settings after the fact.
+
+### Changed
+- Birth control settings auto-save now. Tap a row, the change is live; no Save button, no extra step. (Two earlier patches for a "selection reverts to None" report didn't take, so the architecture is now one that can't hit that class of bug at all.) A persistence failure, if one ever happens, surfaces in logcat as a `BirthControlVM` error instead of silently.
+
 ## [1.4.3] — 2026-05-22
 
 ### Fixed

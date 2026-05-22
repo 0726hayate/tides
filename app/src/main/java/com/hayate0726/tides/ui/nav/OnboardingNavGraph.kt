@@ -17,6 +17,7 @@ import com.hayate0726.tides.ui.onboarding.GoalsScreen
 import com.hayate0726.tides.ui.onboarding.FlowSymptomsScreen
 import com.hayate0726.tides.ui.onboarding.ImportPromptScreen
 import com.hayate0726.tides.ui.onboarding.LastPeriodScreen
+import com.hayate0726.tides.ui.onboarding.OnboardingBirthControlScreen
 import com.hayate0726.tides.ui.onboarding.PredictionPreviewScreen
 import com.hayate0726.tides.ui.onboarding.PredictionPreviewViewModel
 import com.hayate0726.tides.ui.onboarding.OnboardingComplete
@@ -44,6 +45,7 @@ fun NavGraphBuilder.onboardingNavGraph(
                         OnboardingStep.PIN -> Routes.PinSetup
                         OnboardingStep.BIOMETRIC -> Routes.BiometricSetup
                         OnboardingStep.THREAT -> Routes.ThreatPreset
+                        OnboardingStep.BIRTH_CONTROL -> Routes.OnboardingBirthControl
                         OnboardingStep.IMPORT_PROMPT -> Routes.OnboardingImportPrompt
                         OnboardingStep.LAST_PERIOD -> Routes.LastPeriod
                         OnboardingStep.FLOW_SYMPTOMS -> Routes.FlowSymptoms
@@ -93,6 +95,17 @@ fun NavGraphBuilder.onboardingNavGraph(
                 initial = draft.threatPreset,
                 onContinue = {
                     vm.setThreatPreset(it)
+                    nav.navigate(Routes.OnboardingBirthControl)
+                },
+            )
+        }
+        composable(Routes.OnboardingBirthControl) {
+            val vm = sharedOnboardingVm(nav) ?: return@composable
+            val draft by vm.draft.collectAsStateWithLifecycle()
+            OnboardingBirthControlScreen(
+                initial = draft.birthControl,
+                onContinue = {
+                    vm.setBc(it)
                     nav.navigate(Routes.OnboardingImportPrompt)
                 },
             )

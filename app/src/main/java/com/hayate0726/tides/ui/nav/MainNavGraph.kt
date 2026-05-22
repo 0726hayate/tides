@@ -591,11 +591,8 @@ private fun BirthControlRoute(db: TidesDatabase, nav: NavHostController) {
     val s by vm.state.collectAsStateWithLifecycle()
     SubScreenScaffold("Birth control", nav) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-            BirthControlScreen(state = s, onSelect = vm::select, onSave = vm::save)
+            BirthControlScreen(state = s, onSetMethod = vm::setMethod)
         }
-    }
-    LaunchedEffect(s.saved) {
-        if (s.saved) nav.popBackStack()
     }
 }
 

@@ -151,9 +151,12 @@ class OnboardingViewModel @Inject constructor(
     fun setThreatPreset(p: ThreatPreset) {
         _draft.value = _draft.value.copy(threatPreset = p)
         // threatPreset deliberately not persisted — re-prompt on resume.
-        _currentStep.value = OnboardingStep.IMPORT_PROMPT
+        _currentStep.value = OnboardingStep.BIRTH_CONTROL
     }
-    fun setBc(m: BirthControlMethod) { _draft.value = _draft.value.copy(birthControl = m) }
+    fun setBc(m: BirthControlMethod) {
+        _draft.value = _draft.value.copy(birthControl = m)
+        schedulePersist(OnboardingStep.IMPORT_PROMPT)
+    }
     fun setLastPeriodStart(d: LocalDate?) {
         _draft.value = _draft.value.copy(lastPeriodStart = d)
         schedulePersist(OnboardingStep.FLOW_SYMPTOMS)
