@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] — 2026-05-22
+
+### Added
+- Calendar now renders all four cycle phases. Follicular and luteal days carry a thin colored bar under the day number (honey + plum); period and ovulation keep their existing dotted rings.
+- Legend below the calendar identifying every marker. Shown on both the home calendar and the onboarding prediction preview. Ovulation row is hidden automatically on hormonal birth control.
+
+### Fixed
+- Edit and "Looks good" buttons on the onboarding prediction preview now match the rest of onboarding — they had been bare Material defaults with no visible frame.
+- Biometric setup toggle is readable in both themes. The off state previously looked like a lone dot because the track color was indistinguishable from the page background.
+
 ## [Unreleased]
 
 ### Added — Plan 4: Export, Notifications, Release
