@@ -244,7 +244,10 @@ private fun RootImportResultRoute(appViewModel: AppViewModel, nav: NavHostContro
                 onDone = {
                     if (onboardingVm != null) {
                         onboardingVm.markImported()
-                        nav.navigate(Routes.PinSetup) {
+                        // Import lives between ThreatPreset and LastPeriod —
+                        // navigate forward to LastPeriod, which auto-skips
+                        // to OnboardingComplete because wasImported = true.
+                        nav.navigate(Routes.LastPeriod) {
                             popUpTo(Routes.Welcome) { inclusive = false }
                         }
                     } else {

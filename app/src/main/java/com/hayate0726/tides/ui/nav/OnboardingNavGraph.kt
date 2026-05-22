@@ -15,6 +15,7 @@ import com.hayate0726.tides.data.TidesDatabase
 import com.hayate0726.tides.ui.onboarding.BiometricSetupScreen
 import com.hayate0726.tides.ui.onboarding.GoalsScreen
 import com.hayate0726.tides.ui.onboarding.FlowSymptomsScreen
+import com.hayate0726.tides.ui.onboarding.ImportPromptScreen
 import com.hayate0726.tides.ui.onboarding.LastPeriodScreen
 import com.hayate0726.tides.ui.onboarding.PredictionPreviewScreen
 import com.hayate0726.tides.ui.onboarding.PredictionPreviewViewModel
@@ -43,6 +44,7 @@ fun NavGraphBuilder.onboardingNavGraph(
                         OnboardingStep.PIN -> Routes.PinSetup
                         OnboardingStep.BIOMETRIC -> Routes.BiometricSetup
                         OnboardingStep.THREAT -> Routes.ThreatPreset
+                        OnboardingStep.IMPORT_PROMPT -> Routes.OnboardingImportPrompt
                         OnboardingStep.LAST_PERIOD -> Routes.LastPeriod
                         OnboardingStep.FLOW_SYMPTOMS -> Routes.FlowSymptoms
                         OnboardingStep.PREDICTION -> Routes.Prediction
@@ -91,8 +93,15 @@ fun NavGraphBuilder.onboardingNavGraph(
                 initial = draft.threatPreset,
                 onContinue = {
                     vm.setThreatPreset(it)
-                    nav.navigate(Routes.LastPeriod)
+                    nav.navigate(Routes.OnboardingImportPrompt)
                 },
+            )
+        }
+        composable(Routes.OnboardingImportPrompt) {
+            sharedOnboardingVm(nav) ?: return@composable
+            ImportPromptScreen(
+                onImport = { nav.navigate(Routes.Import) },
+                onStartFresh = { nav.navigate(Routes.LastPeriod) },
             )
         }
         composable(Routes.LastPeriod) {
