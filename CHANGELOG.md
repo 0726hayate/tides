@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] — 2026-05-22
+
+### Fixed
+- Onboarding now always renders in the cream palette, even on phones in system dark mode. Previously the first-run flow showed the OLED-monochrome dark theme, hiding the app's visual identity before the user had a chance to see it. Theme choice still applies normally after onboarding completes.
+
 ## [1.4.0] — 2026-05-22
 
 ### Added
