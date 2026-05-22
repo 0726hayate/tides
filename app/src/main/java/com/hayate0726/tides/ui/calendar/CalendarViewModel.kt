@@ -9,7 +9,6 @@ import com.hayate0726.tides.domain.PhaseCalculator
 import com.hayate0726.tides.domain.model.BirthControlMethod
 import com.hayate0726.tides.domain.model.CalendarView
 import com.hayate0726.tides.domain.model.Cycle
-import com.hayate0726.tides.domain.model.Goal
 import com.hayate0726.tides.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +41,8 @@ class CalendarViewModel(
         val symptomDays: Set<LocalDate> = emptySet(),
         val view: CalendarView = CalendarView.ALL,
         val showOvulation: Boolean = false,
-        val ovulationWindow: ClosedRange<LocalDate>? = null,
+        val predictedPeriodRanges: List<ClosedRange<LocalDate>> = emptyList(),
+        val ovulationRanges: List<ClosedRange<LocalDate>> = emptyList(),
     )
 
     init { refresh() }
@@ -57,17 +57,25 @@ class CalendarViewModel(
             val symptoms = repo.symptomEntriesInRange(from, to).map { it.date }.toSet()
             val show = userPrivacyRepository?.view?.value?.showOvulation == true
             val today = _state.value.today
-            val ovWindow = if (show) {
-                val bc = db.birthControlDao().activeOnce()?.method ?: BirthControlMethod.NONE
-                val goals: Set<Goal> = db.goalDao().all().toSet()
-                PhaseCalculator.compute(cycles, today, bc, goals)
-                    ?.ovulationWindow?.let { it.start..it.end }
-            } else null
+            val bc = db.birthControlDao().activeOnce()?.method ?: BirthControlMethod.NONE
+            // Project 3 cycles ahead. We trim the FIRST cycle's period range
+            // to days that have NOT been logged — the user already sees solid
+            // markers for logged period days, so the dotted overlay would just
+            // be visual noise on top.
+            val projections = PhaseCalculator.project(
+                cycles = cycles,
+                today = today,
+                birthControl = bc,
+                cyclesAhead = 3,
+            )
+            val predictedPeriodRanges = projections.map { it.periodRange }
+            val ovulationRanges = if (show) projections.map { it.ovulationRange } else emptyList()
             _state.value = _state.value.copy(
                 cycles = cycles,
                 symptomDays = symptoms,
                 showOvulation = show,
-                ovulationWindow = ovWindow,
+                predictedPeriodRanges = predictedPeriodRanges,
+                ovulationRanges = ovulationRanges,
             )
             widgetUpdater?.publish(cycles, showOvulation = show)
         }

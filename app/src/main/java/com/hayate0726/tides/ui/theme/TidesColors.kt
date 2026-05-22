@@ -25,6 +25,8 @@ object TidesColors {
     val LightDeepInk = Color(0xFF5A4A30)
     val LightPeriodRed = Color(0xFFB04A3F)
     val LightAccentInk = Color(0xFF8A3A30)
+    /** Used for predicted-ovulation dotted ring on the calendar. */
+    val LightOvulationAccent = Color(0xFF5E6F8C)
 
     // Dark theme
     val DarkBackground = Color(0xFF0A0A0A)
@@ -34,6 +36,8 @@ object TidesColors {
     val DarkFaintInk = Color(0xFF3F3F46)
     val DarkPeriodRed = Color(0xFFB8413A)
     val DarkAccentInk = Color(0xFFE57373)
+    /** Used for predicted-ovulation dotted ring on the calendar. */
+    val DarkOvulationAccent = Color(0xFF9CB1D9)
 
     val LightScheme: ColorScheme = lightColorScheme(
         primary = LightInk,

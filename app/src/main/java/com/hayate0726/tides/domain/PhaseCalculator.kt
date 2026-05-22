@@ -13,7 +13,6 @@ import java.time.temporal.ChronoUnit
  *
  * Returns null (phase suppressed) when:
  *  - The user is on hormonal contraception (PILL, HORMONAL_IUD, IMPLANT, PATCH, RING).
- *  - None of the user's goals include "Avoid pregnancy" or "Trying to conceive."
  *  - There's no active cycle.
  *  - There's no completed cycle to estimate a median length from.
  *  - The personal median cycle length is outside 21..35 days, where the
@@ -21,6 +20,10 @@ import java.time.temporal.ChronoUnit
  *    Henry et al. 2024 Hum Reprod showing luteal-phase variation).
  *  - `assumeCycleLength` (optional) provides a fallback median length when no
  *    completed cycles exist yet. Used by the onboarding prediction preview.
+ *
+ * As of v1.3 the goal-based gate (AVOID_PREGNANCY / TRYING_TO_CONCEIVE) is
+ * removed — predictions are shown for everyone not on hormonal BC. The
+ * `goals` parameter remains on the signature for callsite stability.
  *
  * Ovulation estimate:
  *   ovulationDay = medianCycleLength - LUTEAL_PHASE_DAYS  (clinical fixed-luteal)
@@ -62,7 +65,6 @@ object PhaseCalculator {
             "cycles must be sorted ascending by start"
         }
         if (birthControl.isHormonal) return null
-        if (goals.intersect(Goal.OVULATION_RELEVANT).isEmpty()) return null
 
         val active = cycles.firstOrNull { it.isActive } ?: return null
         val completedLengths = cycles.filter { !it.isActive }.mapNotNull { it.length }
@@ -105,6 +107,82 @@ object PhaseCalculator {
             ovulationWindow = PredictionRange(start = ovStart, end = ovEnd, confidence = confidence),
         )
     }
+
+    /**
+     * Forward-projects [cyclesAhead] cycles starting from the user's active
+     * cycle, returning each cycle's predicted period range and ovulation
+     * window. Returns an empty list when phase prediction would be suppressed
+     * (hormonal BC, no active cycle, no median length, length out of trust
+     * range). Confidence drops with each subsequent projected cycle since
+     * each projection compounds the median-length estimate's error.
+     */
+    fun project(
+        cycles: List<Cycle>,
+        today: LocalDate,
+        birthControl: BirthControlMethod,
+        cyclesAhead: Int = 3,
+        assumeCycleLength: Int? = null,
+    ): List<ProjectedCycle> {
+        if (cyclesAhead <= 0) return emptyList()
+        if (birthControl.isHormonal) return emptyList()
+        val active = cycles.firstOrNull { it.isActive } ?: return emptyList()
+
+        val completedLengths = cycles.filter { !it.isActive }.mapNotNull { it.length }
+        val medianLength = when {
+            completedLengths.isNotEmpty() -> lowMedian(completedLengths)
+            assumeCycleLength != null -> assumeCycleLength
+            else -> return emptyList()
+        }
+        if (medianLength !in MIN_TRUSTED_CYCLE_LENGTH..MAX_TRUSTED_CYCLE_LENGTH) {
+            return emptyList()
+        }
+
+        val completedPeriodLengths = cycles.filter { !it.isActive }.mapNotNull { it.periodLength }
+        val periodLastDayOfCycle =
+            if (completedPeriodLengths.size >= MIN_CYCLES_FOR_PERSONAL_MEDIAN) {
+                lowMedian(completedPeriodLengths)
+            } else {
+                COLD_START_PERIOD_LAST_DAY
+            }
+        val ovulationDayOfCycle = medianLength - LUTEAL_PHASE_DAYS
+
+        val baseConfidence = if (completedLengths.isEmpty()) {
+            PredictionRange.Confidence.LOW
+        } else {
+            confidenceFromHistory(completedLengths.size)
+        }
+
+        val out = mutableListOf<ProjectedCycle>()
+        var cycleStart = active.start
+        repeat(cyclesAhead) { i ->
+            val periodLast = cycleStart.plusDays((periodLastDayOfCycle - 1).toLong())
+            val ovStart = cycleStart.plusDays(
+                (ovulationDayOfCycle - OVULATION_WINDOW_HALF_WIDTH - 1).toLong(),
+            )
+            val ovEnd = cycleStart.plusDays(
+                (ovulationDayOfCycle + OVULATION_WINDOW_HALF_WIDTH - 1).toLong(),
+            )
+            // Confidence degrades with each forward projection — by cycle 3
+            // we're stacking three median-length estimates.
+            val confidence = when (i) {
+                0 -> baseConfidence
+                else -> PredictionRange.Confidence.LOW
+            }
+            out += ProjectedCycle(
+                periodRange = cycleStart..periodLast,
+                ovulationRange = ovStart..ovEnd,
+                confidence = confidence,
+            )
+            cycleStart = cycleStart.plusDays(medianLength.toLong())
+        }
+        return out
+    }
+
+    data class ProjectedCycle(
+        val periodRange: ClosedRange<LocalDate>,
+        val ovulationRange: ClosedRange<LocalDate>,
+        val confidence: PredictionRange.Confidence,
+    )
 
     private fun lowMedian(values: List<Int>): Int =
         values.sorted().let { it[(it.size - 1) / 2] }

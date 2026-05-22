@@ -5,6 +5,7 @@ import com.hayate0726.tides.domain.model.Cycle
 import com.hayate0726.tides.domain.model.Goal
 import com.hayate0726.tides.domain.model.Phase
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -38,15 +39,19 @@ class PhaseCalculatorTest {
     }
 
     @Test
-    fun `phase is null when goals do not include ovulation-relevant`() {
-        val active = cycle("2026-05-01", "2026-05-04", null)
+    fun `phase is computed for non-ovulation-relevant goals (v1_3 gate removal)`() {
+        // v1.3 removed the goal-based gate. With non-hormonal BC and a
+        // valid active cycle, phase + ovulation window are computed
+        // regardless of goal selection.
+        val completed = cycle("2026-05-01", "2026-05-04", "2026-05-29")
+        val active = cycle("2026-05-29", "2026-06-02", null)
         val result = PhaseCalculator.compute(
-            cycles = listOf(active),
-            today = LocalDate.parse("2026-05-14"),
+            cycles = listOf(completed, active),
+            today = LocalDate.parse("2026-06-10"),
             birthControl = nonHormonal,
             goals = noOvulationGoals,
         )
-        assertNull(result)
+        assertNotNull(result)
     }
 
     @Test
@@ -216,5 +221,54 @@ class PhaseCalculatorTest {
             goals = ovulationGoals,
         )
         assertEquals(baseline?.ovulationWindow, ignoring?.ovulationWindow)
+    }
+
+    @Test
+    fun `project returns three cycles with correct stride`() {
+        val cycles = listOf(
+            cycle("2026-03-01", "2026-03-04", "2026-03-29"),
+            cycle("2026-03-29", "2026-04-01", "2026-04-26"),
+            cycle("2026-04-26", "2026-04-29", null),
+        )
+        val projections = PhaseCalculator.project(
+            cycles = cycles,
+            today = LocalDate.parse("2026-05-01"),
+            birthControl = nonHormonal,
+            cyclesAhead = 3,
+        )
+        assertEquals(3, projections.size)
+        // Active starts 2026-04-26; median cycle length from completed = 28d.
+        // ovulationDay = 28 - 14 = 14, so ov window = days 12..16 from start.
+        assertEquals(LocalDate.parse("2026-04-26"), projections[0].periodRange.start)
+        assertEquals(LocalDate.parse("2026-05-07"), projections[0].ovulationRange.start)
+        // Second projection stride: +28 days.
+        assertEquals(LocalDate.parse("2026-05-24"), projections[1].periodRange.start)
+        assertEquals(LocalDate.parse("2026-06-04"), projections[1].ovulationRange.start)
+    }
+
+    @Test
+    fun `project returns empty on hormonal bc`() {
+        val cycles = listOf(
+            cycle("2026-03-01", "2026-03-04", "2026-03-29"),
+            cycle("2026-03-29", "2026-04-01", null),
+        )
+        val projections = PhaseCalculator.project(
+            cycles = cycles,
+            today = LocalDate.parse("2026-04-15"),
+            birthControl = BirthControlMethod.PILL,
+            cyclesAhead = 3,
+        )
+        assertEquals(0, projections.size)
+    }
+
+    @Test
+    fun `project returns empty without active cycle`() {
+        val projections = PhaseCalculator.project(
+            cycles = emptyList(),
+            today = LocalDate.parse("2026-04-15"),
+            birthControl = nonHormonal,
+            cyclesAhead = 3,
+        )
+        assertEquals(0, projections.size)
     }
 }

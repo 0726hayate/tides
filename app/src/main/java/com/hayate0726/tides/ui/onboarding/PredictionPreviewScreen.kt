@@ -43,8 +43,8 @@ fun PredictionPreviewScreen(
             month = month,
             today = state.enteredPeriod.start,
             periodDays = daysIn(state.enteredPeriod),
-            predictedPeriod = state.predictedNextPeriod,
-            ovulationWindow = state.fertileWindow,
+            predictedPeriodRanges = listOf(state.predictedNextPeriod),
+            ovulationRanges = listOfNotNull(state.fertileWindow),
             symptomDays = emptySet(),
         )
         CalendarMonth(

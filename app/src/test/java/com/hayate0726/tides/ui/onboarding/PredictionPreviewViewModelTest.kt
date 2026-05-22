@@ -47,13 +47,16 @@ class PredictionPreviewViewModelTest {
     }
 
     @Test
-    fun `fertile window absent when goals dont include ovulation-relevant`() {
+    fun `fertile window present even without ovulation-relevant goals (v1_3)`() {
+        // v1.3 removed the goal-based gate on PhaseCalculator. The fertile
+        // window now surfaces for non-hormonal BC regardless of goals.
         val state = PredictionPreviewViewModel.compute(
             lastPeriodStart = start,
             goals = setOf(Goal.TRACK_PERIOD),
             birthControl = BirthControlMethod.NONE,
         )
-        assertNull(state.fertileWindow)
+        assertEquals(start.plusDays(11), state.fertileWindow!!.start)
+        assertEquals(start.plusDays(15), state.fertileWindow!!.endInclusive)
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.hayate0726.tides.ui.calendar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,12 +16,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.hayate0726.tides.domain.model.CalendarView
-import com.hayate0726.tides.ui.theme.DiamondGlyph
-import com.hayate0726.tides.ui.theme.DropGlyph
+import com.hayate0726.tides.ui.theme.TidesColors
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -29,10 +33,15 @@ data class CalendarMonthState(
     val month: YearMonth,
     val today: LocalDate,
     val periodDays: Set<LocalDate>,
-    val predictedPeriod: ClosedRange<LocalDate>?,
-    val ovulationWindow: ClosedRange<LocalDate>?,
+    /** Predicted future period day ranges (current cycle + projected cycles). */
+    val predictedPeriodRanges: List<ClosedRange<LocalDate>>,
+    /** Predicted ovulation windows (current cycle + projected cycles). */
+    val ovulationRanges: List<ClosedRange<LocalDate>>,
     val symptomDays: Set<LocalDate>,
 )
+
+private fun List<ClosedRange<LocalDate>>.containsDate(d: LocalDate): Boolean =
+    any { d in it }
 
 @Composable
 fun CalendarMonth(
@@ -45,6 +54,13 @@ fun CalendarMonth(
     val daysInMonth = state.month.lengthOfMonth()
     val firstDayOfWeek = firstOfMonth.dayOfWeek
     val leadingBlanks = (firstDayOfWeek.value - DayOfWeek.MONDAY.value + 7) % 7
+
+    val periodRing = MaterialTheme.colorScheme.secondary
+    val ovulationRing = if (isSystemInDarkTheme()) {
+        TidesColors.DarkOvulationAccent
+    } else {
+        TidesColors.LightOvulationAccent
+    }
 
     Column(modifier = modifier) {
         Row(Modifier.fillMaxWidth()) {
@@ -69,17 +85,25 @@ fun CalendarMonth(
                         Box(Modifier.weight(1f).aspectRatio(1f))
                     } else {
                         val date = firstOfMonth.plusDays(dayIndex.toLong())
+                        val isPeriod = view != CalendarView.SYMPTOMS && date in state.periodDays
+                        // Dotted period ring is suppressed on days already
+                        // shown as solid logged-period markers — otherwise
+                        // the ring just doubles up on the filled circle.
+                        val isPredictedPeriod = !isPeriod &&
+                            view != CalendarView.SYMPTOMS &&
+                            state.predictedPeriodRanges.containsDate(date)
+                        val isOvulation = view in listOf(CalendarView.ALL, CalendarView.PHASES) &&
+                            state.ovulationRanges.containsDate(date)
                         DayCell(
                             date = date,
                             isToday = date == state.today,
-                            isPeriod = view != CalendarView.SYMPTOMS && date in state.periodDays,
-                            isPredictedPeriod = view != CalendarView.SYMPTOMS &&
-                                state.predictedPeriod?.contains(date) == true &&
-                                date !in state.periodDays,
-                            isOvulation = view in listOf(CalendarView.ALL, CalendarView.PHASES) &&
-                                state.ovulationWindow?.contains(date) == true,
+                            isPeriod = isPeriod,
+                            isPredictedPeriod = isPredictedPeriod,
+                            isOvulation = isOvulation,
                             hasSymptom = view in listOf(CalendarView.ALL, CalendarView.SYMPTOMS) &&
                                 date in state.symptomDays,
+                            periodRingColor = periodRing,
+                            ovulationRingColor = ovulationRing,
                             modifier = Modifier.weight(1f).aspectRatio(1f).clickable { onDayClick(date) },
                         )
                         dayIndex++
@@ -98,6 +122,8 @@ private fun DayCell(
     isPredictedPeriod: Boolean,
     isOvulation: Boolean,
     hasSymptom: Boolean,
+    periodRingColor: Color,
+    ovulationRingColor: Color,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.semantics(mergeDescendants = true) {
@@ -110,14 +136,26 @@ private fun DayCell(
         }
         contentDescription = parts.joinToString(", ")
     }, contentAlignment = Alignment.Center) {
+        // Layered dotted rings — period (red) is the outer ring and
+        // ovulation (blue) goes inside so both stay visible on days that
+        // overlap (rare with a 28-day cycle but possible at edges).
+        val ringModifier = Modifier
+            .size(36.dp)
+            .let {
+                if (isPredictedPeriod) it.dottedRing(periodRingColor, insetDp = 1.5f) else it
+            }
+            .let {
+                if (isOvulation && !isPeriod) it.dottedRing(ovulationRingColor, insetDp = if (isPredictedPeriod) 4.5f else 1.5f)
+                else it
+            }
+
         Box(
-            modifier = Modifier
-                .size(36.dp)
+            modifier = ringModifier
                 .background(
                     color = when {
                         isPeriod -> MaterialTheme.colorScheme.secondary
                         isToday -> MaterialTheme.colorScheme.onSurface
-                        else -> androidx.compose.ui.graphics.Color.Transparent
+                        else -> Color.Transparent
                     },
                     shape = CircleShape,
                 )
@@ -133,26 +171,6 @@ private fun DayCell(
                 },
                 style = MaterialTheme.typography.bodyMedium,
             )
-            if (isPeriod) {
-                Box(modifier = Modifier.size(28.dp).padding(2.dp), contentAlignment = Alignment.TopEnd) {
-                    DropGlyph(color = MaterialTheme.colorScheme.onSecondary, size = 5.dp, contentDescription = "Period day")
-                }
-            }
-            if (isPredictedPeriod) {
-                Box(modifier = Modifier.size(28.dp).padding(2.dp), contentAlignment = Alignment.TopEnd) {
-                    DropGlyph(
-                        color = MaterialTheme.colorScheme.secondary,
-                        size = 5.dp,
-                        filled = false,
-                        contentDescription = "Predicted period",
-                    )
-                }
-            }
-            if (isOvulation) {
-                Box(modifier = Modifier.size(28.dp).padding(2.dp), contentAlignment = Alignment.TopEnd) {
-                    DiamondGlyph(color = MaterialTheme.colorScheme.onBackground, size = 5.dp, contentDescription = "Ovulation")
-                }
-            }
         }
         if (hasSymptom) {
             Box(
@@ -167,4 +185,26 @@ private fun DayCell(
             }
         }
     }
+}
+
+/**
+ * Draws a dotted circular ring around the cell, inset by [insetDp] so
+ * multiple rings on the same cell don't overlap. Stroke width 1.5 dp, dash
+ * pattern (3 px on, 3 px off) — reads as a clear "expected, not logged"
+ * marker without competing with solid logged-period circles.
+ */
+private fun Modifier.dottedRing(color: Color, insetDp: Float): Modifier = this.drawBehind {
+    val strokePx = 1.5.dp.toPx()
+    val inset = insetDp.dp.toPx()
+    val radius = (size.minDimension / 2f) - inset - strokePx / 2f
+    if (radius <= 0f) return@drawBehind
+    drawCircle(
+        color = color,
+        radius = radius,
+        center = androidx.compose.ui.geometry.Offset(size.width / 2f, size.height / 2f),
+        style = Stroke(
+            width = strokePx,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()), 0f),
+        ),
+    )
 }

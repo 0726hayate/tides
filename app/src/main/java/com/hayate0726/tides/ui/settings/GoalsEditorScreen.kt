@@ -49,8 +49,9 @@ fun GoalsEditorScreen(
         Text("Goals", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.size(8.dp))
         Text(
-            "Tides shows features that match your goals. Pick 'Avoid pregnancy' or " +
-                "'Trying to conceive' to see fertile-window and phase predictions.",
+            "Tides shows features that match your goals. Predictions and the " +
+                "fertile-window view appear by default as long as you aren't on " +
+                "hormonal birth control.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -18,9 +18,11 @@ class UserPrivacyViewTest {
         assertTrue(v.showOvulation)
     }
 
-    @Test fun track_period_alone_suppresses_ovulation() {
+    @Test fun track_period_alone_with_no_bc_now_shows_ovulation() {
+        // v1.3 removed the goal-based gate — ovulation UI surfaces for
+        // anyone whose active BC isn't hormonal, regardless of goals.
         val v = UserPrivacyView.compute(setOf(Goal.TRACK_PERIOD), activeBc = null)
-        assertFalse(v.showOvulation)
+        assertTrue(v.showOvulation)
     }
 
     @Test fun avoid_pregnancy_with_pill_suppresses_ovulation() {
@@ -33,8 +35,9 @@ class UserPrivacyViewTest {
         assertFalse(v.showOvulation)
     }
 
-    @Test fun no_goals_suppresses_ovulation() {
+    @Test fun no_goals_with_no_bc_now_shows_ovulation() {
+        // v1.3: no-goals + no-BC users see predictions too.
         val v = UserPrivacyView.compute(emptySet(), activeBc = null)
-        assertFalse(v.showOvulation)
+        assertTrue(v.showOvulation)
     }
 }
