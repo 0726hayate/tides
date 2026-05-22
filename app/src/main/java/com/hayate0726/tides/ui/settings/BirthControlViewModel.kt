@@ -28,6 +28,13 @@ class BirthControlViewModel(
         val current: BirthControlMethod? = null,
         val selected: BirthControlMethod = BirthControlMethod.NONE,
         val saved: Boolean = false,
+        /**
+         * True once the user has tapped a radio. The async DB read in init
+         * checks this so it doesn't clobber a tap that landed while the read
+         * was in flight — that was the "selection snaps back to None on
+         * fresh install" bug.
+         */
+        val userTouched: Boolean = false,
     )
 
     private val _state = MutableStateFlow(UiState())
@@ -36,12 +43,15 @@ class BirthControlViewModel(
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val active = db.birthControlDao().activeOnce()?.method ?: BirthControlMethod.NONE
-            _state.value = _state.value.copy(current = active, selected = active)
+            _state.value = _state.value.let { cur ->
+                if (cur.userTouched) cur.copy(current = active)
+                else cur.copy(current = active, selected = active)
+            }
         }
     }
 
     fun select(m: BirthControlMethod) {
-        _state.value = _state.value.copy(selected = m, saved = false)
+        _state.value = _state.value.copy(selected = m, saved = false, userTouched = true)
     }
 
     fun save() {
