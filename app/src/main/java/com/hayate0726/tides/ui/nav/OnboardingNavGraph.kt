@@ -53,7 +53,6 @@ fun NavGraphBuilder.onboardingNavGraph(
                 },
                 onStartOver = { vm.startFresh() },
                 onContinue = { nav.navigate(Routes.Goals) },
-                onImport = { nav.navigate(Routes.Import) },
             )
         }
         composable(Routes.Goals) {

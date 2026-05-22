@@ -4,12 +4,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,12 +38,24 @@ fun BiometricSetupScreen(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Enable biometric unlock", modifier = Modifier.weight(1f))
-            Switch(checked = enabled, onCheckedChange = { enabled = it })
+            Switch(
+                checked = enabled,
+                onCheckedChange = { enabled = it },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.background,
+                    checkedTrackColor = MaterialTheme.colorScheme.onSurface,
+                    checkedBorderColor = MaterialTheme.colorScheme.onSurface,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surface,
+                    uncheckedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            )
         }
 
         Spacer(Modifier.size(24.dp))
-        Button(onClick = { onContinue(enabled) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Continue")
-        }
+        OnboardingPrimaryButton(
+            text = "Continue",
+            onClick = { onContinue(enabled) },
+        )
     }
 }

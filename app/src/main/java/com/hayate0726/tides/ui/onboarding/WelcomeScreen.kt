@@ -12,9 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,7 +30,6 @@ fun WelcomeScreen(
     onResume: () -> Unit,
     onStartOver: () -> Unit,
     onContinue: () -> Unit,
-    onImport: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -58,12 +55,16 @@ fun WelcomeScreen(
                     )
                     Spacer(Modifier.size(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = onResume, modifier = Modifier.weight(1f)) {
-                            Text("Resume")
-                        }
-                        OutlinedButton(onClick = { showConfirm = true }, modifier = Modifier.weight(1f)) {
-                            Text("Start over")
-                        }
+                        OnboardingPrimaryButton(
+                            text = "Resume",
+                            onClick = onResume,
+                            modifier = Modifier.weight(1f),
+                        )
+                        OnboardingSecondaryButton(
+                            text = "Start over",
+                            onClick = { showConfirm = true },
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
             }
@@ -128,13 +129,10 @@ fun WelcomeScreen(
         )
 
         Spacer(Modifier.size(32.dp))
-        Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
-            Text("I understand — set up Tides")
-        }
-        Spacer(Modifier.size(12.dp))
-        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
-            Text("Import from another app")
-        }
+        OnboardingPrimaryButton(
+            text = "I understand — set up Tides",
+            onClick = onContinue,
+        )
         Spacer(Modifier.size(24.dp))
     }
 }

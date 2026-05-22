@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -76,8 +75,9 @@ fun ThreatPresetScreen(
         }
 
         Spacer(Modifier.size(24.dp))
-        Button(onClick = { onContinue(selected) }, modifier = Modifier.fillMaxWidth()) {
-            Text("Continue")
-        }
+        OnboardingPrimaryButton(
+            text = "Continue",
+            onClick = { onContinue(selected) },
+        )
     }
 }

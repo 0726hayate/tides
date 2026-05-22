@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -118,16 +116,18 @@ fun FlowSymptomsScreen(
 
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(
+            OnboardingSecondaryButton(
+                text = "Skip the rest",
                 onClick = { flow?.let { onSkipRest(it, emptySet()) } },
                 enabled = flow != null,
                 modifier = Modifier.weight(1f),
-            ) { Text("Skip the rest") }
-            Button(
+            )
+            OnboardingPrimaryButton(
+                text = "Save",
                 onClick = { flow?.let { onSave(it, selected) } },
                 enabled = flow != null,
                 modifier = Modifier.weight(1f),
-            ) { Text("Save") }
+            )
         }
     }
 }

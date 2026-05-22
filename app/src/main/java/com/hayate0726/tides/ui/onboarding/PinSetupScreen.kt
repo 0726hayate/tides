@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -120,7 +119,9 @@ fun PinSetupScreen(onContinue: (String) -> Unit) {
         )
         Spacer(Modifier.size(16.dp))
 
-        Button(
+        OnboardingPrimaryButton(
+            text = if (confirming) "Confirm" else "Continue",
+            enabled = draft.length >= MIN_PIN_LENGTH,
             onClick = {
                 if (!confirming) {
                     if (draft.length < MIN_PIN_LENGTH) {
@@ -143,11 +144,7 @@ fun PinSetupScreen(onContinue: (String) -> Unit) {
                     }
                 }
             },
-            enabled = draft.length >= MIN_PIN_LENGTH,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(if (confirming) "Confirm" else "Continue")
-        }
+        )
     }
 }
 
