@@ -37,4 +37,4 @@ A Ko-fi link is available in Settings for users who want to support
 development, but the app itself never asks for money.
 
 Source code and bug reports:
-https://github.com/hayate0726/tides
+https://github.com/0726hayate/tides

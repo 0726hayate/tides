@@ -67,7 +67,7 @@ fun FeedbackScreen() {
                 val intent = Intent(
                     Intent.ACTION_VIEW,
                     Uri.parse(
-                        "https://github.com/hayate0726/tides/issues/new?labels=feedback&body=$body"
+                        "https://github.com/0726hayate/tides/issues/new?labels=feedback&body=$body"
                     )
                 )
                 ctx.startActivity(intent)

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.6] — 2026-05-22
+
+### Fixed
+- Check for updates and Send feedback now open the correct GitHub URLs. Both pointed at `github.com/hayate0726/tides` (404) instead of `github.com/0726hayate/tides`. F-Droid description string corrected too.
+
 ## [1.4.5] — 2026-05-22
 
 ### Changed
