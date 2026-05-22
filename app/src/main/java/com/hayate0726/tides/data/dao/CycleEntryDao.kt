@@ -27,4 +27,7 @@ interface CycleEntryDao {
 
     @Query("SELECT * FROM cycle_entries ORDER BY date ASC")
     suspend fun all(): List<CycleEntryEntity>
+
+    @Query("SELECT DISTINCT date FROM cycle_entries")
+    suspend fun allDates(): List<LocalDate>
 }

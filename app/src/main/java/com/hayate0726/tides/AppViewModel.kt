@@ -9,8 +9,10 @@ import com.hayate0726.tides.crypto.KeyDerivation
 import com.hayate0726.tides.crypto.Pin
 import com.hayate0726.tides.data.DatabaseFactory
 import com.hayate0726.tides.data.TidesDatabase
+import com.hayate0726.tides.data.`import`.PreImportSnapshot
 import com.hayate0726.tides.di.AuthMetaFile
 import com.hayate0726.tides.di.CyclesDbFile
+import com.hayate0726.tides.di.PreImportSnapshotFile
 import com.hayate0726.tides.lock.LockManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,6 +32,7 @@ class AppViewModel @Inject constructor(
     @ApplicationContext private val ctx: Context,
     @CyclesDbFile private val dbFile: File,
     @AuthMetaFile private val authMetaFile: File,
+    @PreImportSnapshotFile private val snapshotFile: File,
     private val authMetaStore: FileAuthMetaStore,
     private val lockManager: LockManager,
     private val biometricKeyStore: com.hayate0726.tides.crypto.BiometricKeyStore,
@@ -47,6 +50,35 @@ class AppViewModel @Inject constructor(
     val unlockError: StateFlow<String?> = _unlockError.asStateFlow()
 
     fun clearUnlockError() { _unlockError.update { null } }
+
+    private val _hasPreImportSnapshot = MutableStateFlow(false)
+    val hasPreImportSnapshotFlow: StateFlow<Boolean> = _hasPreImportSnapshot.asStateFlow()
+
+    fun refreshPreImportSnapshotState() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _hasPreImportSnapshot.value = PreImportSnapshot(dbFile, snapshotFile).exists()
+        }
+    }
+
+    /**
+     * Restores the pre-import snapshot over the live DB. Closes the live database
+     * first (transitions to Locked), then swaps the file. User re-unlocks with
+     * their PIN. Returns true on success.
+     */
+    suspend fun rollbackLastImport(): Boolean {
+        return stateMutex.withLock {
+            val snap = PreImportSnapshot(dbFile, snapshotFile)
+            if (!snap.exists()) return@withLock false
+            val current = _state.value
+            if (current is AppState.Unlocked) {
+                current.db.close()
+                _state.value = AppState.Locked
+            }
+            val ok = snap.restore()
+            _hasPreImportSnapshot.value = false
+            ok
+        }
+    }
 
     /**
      * Serializes state transitions. Without this, lock() and onUnlockAttempt()

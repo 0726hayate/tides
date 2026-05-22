@@ -30,4 +30,7 @@ interface SymptomEntryDao {
 
     @Query("SELECT * FROM symptom_entries ORDER BY date ASC")
     suspend fun all(): List<SymptomEntryEntity>
+
+    @Query("SELECT DISTINCT date FROM symptom_entries")
+    suspend fun allDates(): List<LocalDate>
 }

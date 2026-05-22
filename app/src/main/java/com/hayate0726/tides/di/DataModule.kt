@@ -14,6 +14,10 @@ import javax.inject.Singleton
 @Retention(AnnotationRetention.BINARY)
 annotation class CyclesDbFile
 
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class PreImportSnapshotFile
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DataModule {
@@ -23,4 +27,10 @@ object DataModule {
     @CyclesDbFile
     fun provideCyclesDbFile(@ApplicationContext ctx: Context): File =
         File(ctx.filesDir, "tides.db")
+
+    @Provides
+    @Singleton
+    @PreImportSnapshotFile
+    fun providePreImportSnapshotFile(@CyclesDbFile dbFile: File): File =
+        File(dbFile.parentFile, dbFile.name + ".pre-import")
 }
