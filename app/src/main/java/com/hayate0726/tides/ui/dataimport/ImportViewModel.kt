@@ -188,12 +188,12 @@ class ImportViewModel @Inject constructor(
         val parse = pendingParse ?: return
         val preview = (_status.value as? Status.PreviewReady)?.preview ?: return
         _status.value = Status.Committing(preview)
-        viewModelScope.launch(Dispatchers.Main) {
+        viewModelScope.launch(Dispatchers.IO) {
             onboardingVm.stageImport(parse)
             _status.value = Status.Complete(
                 ImportResult(addedDates = parse.entries.size, skippedDates = 0)
             )
-            onComplete()
+            withContext(Dispatchers.Main) { onComplete() }
         }
     }
 

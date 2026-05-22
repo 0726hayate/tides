@@ -98,7 +98,12 @@ class OnboardingViewModel @Inject constructor(
     fun stageImport(parseResult: com.hayate0726.tides.data.`import`.ParseResult) {
         pendingImport = parseResult
         _wasImported.value = true
-        _currentStep.value = OnboardingStep.PIN
+        // Persist step bump so a process kill before PIN entry still resumes
+        // at the right place. The pendingImport itself is not persisted (same
+        // discipline as PIN material — too sensitive for the draft store);
+        // process death loses the staged import and the user re-imports via
+        // Settings.
+        schedulePersist(OnboardingStep.PIN)
     }
 
     private val _completion = MutableStateFlow<TidesDatabase?>(null)
@@ -254,8 +259,10 @@ class OnboardingViewModel @Inject constructor(
             pendingImport?.let { staged ->
                 try {
                     com.hayate0726.tides.data.`import`.ImportPipeline().commit(staged, db)
-                } catch (_: Exception) {
-                    // Swallow; the user retains the option to re-import later.
+                } catch (e: Exception) {
+                    // Don't block onboarding completion — the user can re-import
+                    // via Settings. Log to logcat for QA visibility.
+                    android.util.Log.w("OnboardingViewModel", "Staged import failed to apply", e)
                 }
                 pendingImport = null
             }

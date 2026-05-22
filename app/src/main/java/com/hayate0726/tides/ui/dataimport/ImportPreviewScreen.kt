@@ -24,6 +24,7 @@ fun ImportPreviewScreen(
     preview: PreviewState,
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
+    showSnapshotReassurance: Boolean = true,
 ) {
     Column(
         modifier = Modifier
@@ -75,12 +76,14 @@ fun ImportPreviewScreen(
             }
         }
 
-        Spacer(Modifier.size(16.dp))
-        Text(
-            "Tides will save a snapshot before importing. You can roll it back from Settings.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (showSnapshotReassurance) {
+            Spacer(Modifier.size(16.dp))
+            Text(
+                "Tides will save a snapshot before importing. You can roll it back from Settings.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
 
         Spacer(Modifier.size(24.dp))
         Row(

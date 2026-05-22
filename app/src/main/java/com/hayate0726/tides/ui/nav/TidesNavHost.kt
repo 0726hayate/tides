@@ -200,6 +200,9 @@ private fun RootImportPreviewRoute(appViewModel: AppViewModel, nav: NavHostContr
                         }
                     }
                 },
+                // No snapshot is taken on the onboarding path — the DB doesn't
+                // exist yet; we stage the parse on OnboardingViewModel instead.
+                showSnapshotReassurance = !isOnboarding,
             )
         }
     }
@@ -240,7 +243,10 @@ private fun RootImportResultRoute(appViewModel: AppViewModel, nav: NavHostContro
                         }
                     } else {
                         appViewModel.refreshPreImportSnapshotState()
-                        nav.popBackStack(Routes.Settings, inclusive = false)
+                        // Routes.Settings lives inside the MainScaffold inner
+                        // NavHost, not this root nav. Pop back to Main; the
+                        // inner host preserves the Settings tab/route under it.
+                        nav.popBackStack(Routes.Main, inclusive = false)
                     }
                     vm.reset()
                 },
