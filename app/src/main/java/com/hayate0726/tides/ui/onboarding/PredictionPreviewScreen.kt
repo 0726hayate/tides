@@ -8,14 +8,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.hayate0726.tides.domain.model.CalendarView
+import com.hayate0726.tides.ui.calendar.CalendarLegend
 import com.hayate0726.tides.ui.calendar.CalendarMonth
 import com.hayate0726.tides.ui.calendar.CalendarMonthState
 import java.time.LocalDate
@@ -45,12 +44,19 @@ fun PredictionPreviewScreen(
             periodDays = daysIn(state.enteredPeriod),
             predictedPeriodRanges = listOf(state.predictedNextPeriod),
             ovulationRanges = listOfNotNull(state.fertileWindow),
+            follicularRanges = listOfNotNull(state.follicularWindow),
+            lutealRanges = listOfNotNull(state.lutealWindow),
             symptomDays = emptySet(),
         )
         CalendarMonth(
             state = calendarState,
             view = CalendarView.ALL,
             onDayClick = { /* read-only preview */ },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.size(12.dp))
+        CalendarLegend(
+            showOvulation = state.fertileWindow != null,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.size(16.dp))
@@ -78,8 +84,16 @@ fun PredictionPreviewScreen(
 
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onEdit, modifier = Modifier.weight(1f)) { Text("Edit") }
-            Button(onClick = onConfirm, modifier = Modifier.weight(1f)) { Text("Looks good") }
+            OnboardingSecondaryButton(
+                text = "Edit",
+                onClick = onEdit,
+                modifier = Modifier.weight(1f),
+            )
+            OnboardingPrimaryButton(
+                text = "Looks good",
+                onClick = onConfirm,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

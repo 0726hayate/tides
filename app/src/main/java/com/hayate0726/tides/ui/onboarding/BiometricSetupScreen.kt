@@ -45,9 +45,9 @@ fun BiometricSetupScreen(
                     checkedThumbColor = MaterialTheme.colorScheme.background,
                     checkedTrackColor = MaterialTheme.colorScheme.onSurface,
                     checkedBorderColor = MaterialTheme.colorScheme.onSurface,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surface,
-                    uncheckedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurface,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    uncheckedBorderColor = MaterialTheme.colorScheme.onSurface,
                 ),
             )
         }
