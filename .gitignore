@@ -27,3 +27,6 @@ keystore.properties
 # Coverage
 *.exec
 coverage/
+
+# Local dev handoff notes (not for the public repo)
+DEV_HANDOFF.md
