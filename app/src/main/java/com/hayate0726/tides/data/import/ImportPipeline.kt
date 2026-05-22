@@ -47,6 +47,12 @@ class ImportPipeline {
      * already present in either cycle_entries or symptom_entries is skipped
      * entirely (both the CycleEntry and any symptoms for that date), making
      * re-imports idempotent.
+     *
+     * Precondition: `parseResult.entries` must not contain more than one
+     * `ImportedEntry` per date. Each parser today emits exactly one row per
+     * date; if a future caller composes multiple sources they must deduplicate
+     * first. Violating this writes duplicate symptom rows for the second entry
+     * and reports an `addedDates` count lower than the actual write count.
      */
     suspend fun commit(
         parseResult: ParseResult,

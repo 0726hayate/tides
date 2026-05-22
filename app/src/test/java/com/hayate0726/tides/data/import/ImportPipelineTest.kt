@@ -115,6 +115,7 @@ class ImportPipelineTest {
     @BeforeEach
     fun stubRoomTransaction() {
         // Make `db.withTransaction { block }` simply invoke `block()`.
+        // Verified FQN for Room 2.6.1; re-verify if bumping room-ktx.
         mockkStatic("androidx.room.RoomDatabaseKt")
         coEvery {
             any<TidesDatabase>().withTransaction(any<suspend () -> Any>())

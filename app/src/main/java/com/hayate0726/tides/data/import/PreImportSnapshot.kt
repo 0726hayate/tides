@@ -2,6 +2,9 @@ package com.hayate0726.tides.data.`import`
 
 import java.io.File
 import java.io.IOException
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /**
  * One-slot snapshot of the encrypted Tides DB taken before each import.
@@ -42,11 +45,7 @@ class PreImportSnapshot(
         liveDb.inputStream().use { input ->
             tmp.outputStream().use { output -> input.copyTo(output) }
         }
-        if (snapshotFile.exists()) snapshotFile.delete()
-        if (!tmp.renameTo(snapshotFile)) {
-            tmp.delete()
-            throw IOException("Could not rename snapshot tmp to final")
-        }
+        moveAtomically(tmp, snapshotFile)
         return snapshotFile
     }
 
@@ -62,16 +61,31 @@ class PreImportSnapshot(
             snapshotFile.inputStream().use { input ->
                 tmp.outputStream().use { output -> input.copyTo(output) }
             }
-            if (liveDb.exists()) liveDb.delete()
-            if (!tmp.renameTo(liveDb)) {
-                tmp.delete()
-                return false
-            }
+            // Atomic replace eliminates the delete-then-rename window where a
+            // process kill could leave the live DB missing.
+            moveAtomically(tmp, liveDb)
             snapshotFile.delete()
             return true
         } catch (e: IOException) {
             tmp.delete()
             return false
+        }
+    }
+
+    private fun moveAtomically(src: File, dst: File) {
+        try {
+            Files.move(
+                src.toPath(), dst.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+                StandardCopyOption.ATOMIC_MOVE,
+            )
+        } catch (e: AtomicMoveNotSupportedException) {
+            // Same-filesystem atomic move isn't supported (rare on Android internal
+            // storage but possible across mount points). Fall back to replace-only.
+            Files.move(
+                src.toPath(), dst.toPath(),
+                StandardCopyOption.REPLACE_EXISTING,
+            )
         }
     }
 }

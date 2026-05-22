@@ -65,8 +65,8 @@ class AppViewModel @Inject constructor(
      * first (transitions to Locked), then swaps the file. User re-unlocks with
      * their PIN. Returns true on success.
      */
-    suspend fun rollbackLastImport(): Boolean {
-        return stateMutex.withLock {
+    suspend fun rollbackLastImport(): Boolean = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        stateMutex.withLock {
             val snap = PreImportSnapshot(dbFile, snapshotFile)
             if (!snap.exists()) return@withLock false
             val current = _state.value
