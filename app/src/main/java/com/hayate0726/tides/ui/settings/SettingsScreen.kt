@@ -32,6 +32,9 @@ fun SettingsScreen(
     onBiometric: () -> Unit,
     onBirthControl: () -> Unit,
     onAppearance: () -> Unit,
+    onImport: () -> Unit,
+    onRollback: () -> Unit,
+    showRollback: Boolean,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -54,6 +57,10 @@ fun SettingsScreen(
         SettingsSectionHeader("Data")
         SettingsRow("Reminders", onClick = onNotifications)
         SettingsRow("Backup & restore", onClick = onBackup)
+        SettingsRow("Import from another app", onClick = onImport)
+        if (showRollback) {
+            SettingsRow("Roll back last import", onClick = onRollback)
+        }
 
         Spacer(Modifier.size(20.dp))
         SettingsSectionHeader("About")

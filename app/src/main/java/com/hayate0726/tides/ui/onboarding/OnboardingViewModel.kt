@@ -83,6 +83,11 @@ class OnboardingViewModel @Inject constructor(
     private val _currentStep = MutableStateFlow(OnboardingStep.WELCOME)
     val currentStep: StateFlow<OnboardingStep> = _currentStep.asStateFlow()
 
+    private val _wasImported = MutableStateFlow(false)
+    val wasImported: StateFlow<Boolean> = _wasImported.asStateFlow()
+
+    fun markImported() { _wasImported.value = true }
+
     private val _completion = MutableStateFlow<TidesDatabase?>(null)
     val completion: StateFlow<TidesDatabase?> = _completion.asStateFlow()
 

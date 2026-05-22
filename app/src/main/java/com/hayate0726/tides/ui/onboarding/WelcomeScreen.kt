@@ -32,6 +32,7 @@ fun WelcomeScreen(
     onResume: () -> Unit,
     onStartOver: () -> Unit,
     onContinue: () -> Unit,
+    onImport: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -129,6 +130,10 @@ fun WelcomeScreen(
         Spacer(Modifier.size(32.dp))
         Button(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
             Text("I understand — set up Tides")
+        }
+        Spacer(Modifier.size(12.dp))
+        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+            Text("Import from another app")
         }
         Spacer(Modifier.size(24.dp))
     }

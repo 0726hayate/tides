@@ -4,6 +4,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import androidx.navigation.NavGraphBuilder
@@ -52,6 +53,7 @@ fun NavGraphBuilder.onboardingNavGraph(
                 },
                 onStartOver = { vm.startFresh() },
                 onContinue = { nav.navigate(Routes.Goals) },
+                onImport = { nav.navigate(Routes.Import) },
             )
         }
         composable(Routes.Goals) {
@@ -96,6 +98,14 @@ fun NavGraphBuilder.onboardingNavGraph(
         }
         composable(Routes.LastPeriod) {
             val vm = sharedOnboardingVm(nav) ?: return@composable
+            val wasImported by vm.wasImported.collectAsStateWithLifecycle()
+            if (wasImported) {
+                LaunchedEffect(Unit) {
+                    vm.complete()
+                    nav.navigate(Routes.OnboardingCompleteRoute)
+                }
+                return@composable
+            }
             LastPeriodScreen(onFinish = { date ->
                 vm.setLastPeriodStart(date)
                 if (date == null) {

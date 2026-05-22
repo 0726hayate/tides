@@ -48,6 +48,10 @@ import com.hayate0726.tides.ui.settings.DuressSetupScreen
 import com.hayate0726.tides.ui.settings.DuressSetupViewModel
 import com.hayate0726.tides.ui.settings.NotificationsScreen
 import com.hayate0726.tides.ui.settings.NotificationsViewModel
+import com.hayate0726.tides.ui.dataimport.ImportScreen
+import com.hayate0726.tides.ui.dataimport.ImportPreviewScreen
+import com.hayate0726.tides.ui.dataimport.ImportResultScreen
+import com.hayate0726.tides.ui.dataimport.ImportViewModel
 import com.hayate0726.tides.ui.settings.SettingsScreen
 import com.hayate0726.tides.ui.stats.StatsScreen
 import com.hayate0726.tides.ui.stats.StatsViewModel
@@ -119,6 +123,9 @@ fun MainScaffold(appViewModel: AppViewModel, db: TidesDatabase) {
             composable(Routes.SettingsBiometric) { BiometricRoute(nav) }
             composable(Routes.SettingsBirthControl) { BirthControlRoute(db, nav) }
             composable(Routes.SettingsAppearance) { AppearanceRoute(nav) }
+            composable(Routes.Import) { ImportRoute(appViewModel, db, nav) }
+            composable(Routes.ImportPreview) { ImportPreviewRoute(db, nav) }
+            composable(Routes.ImportResult) { ImportResultRoute(appViewModel, nav) }
         }
     }
 }
@@ -338,6 +345,11 @@ private fun SettingsRoute(appViewModel: AppViewModel, db: TidesDatabase, nav: Na
         duressAvailable = preset.duressAvailable
     }
 
+    val hasSnapshot by appViewModel.hasPreImportSnapshotFlow.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { appViewModel.refreshPreImportSnapshotState() }
+    var showRollbackDialog by remember { mutableStateOf(false) }
+    val rollbackScope = androidx.compose.runtime.rememberCoroutineScope()
+
     SettingsScreen(
         threatPresetLabel = presetLabel,
         onChangePreset = { nav.navigate(Routes.SettingsThreatPreset) },
@@ -365,7 +377,37 @@ private fun SettingsRoute(appViewModel: AppViewModel, db: TidesDatabase, nav: Na
         onBiometric = { nav.navigate(Routes.SettingsBiometric) },
         onBirthControl = { nav.navigate(Routes.SettingsBirthControl) },
         onAppearance = { nav.navigate(Routes.SettingsAppearance) },
+        onImport = { nav.navigate(Routes.Import) },
+        onRollback = { showRollbackDialog = true },
+        showRollback = hasSnapshot,
     )
+
+    if (showRollbackDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showRollbackDialog = false },
+            title = { Text("Roll back last import?") },
+            text = {
+                Text(
+                    "This will replace your current data with the snapshot from before your last import. " +
+                        "Anything you added since then will be lost.",
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showRollbackDialog = false
+                    rollbackScope.launch {
+                        appViewModel.rollbackLastImport()
+                        appViewModel.refreshPreImportSnapshotState()
+                    }
+                }) { Text("Roll back") }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showRollbackDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -586,6 +628,111 @@ private fun AppearanceRoute(nav: NavHostController) {
                 onToggleDynamicColor = repo::setUseDynamicColor,
                 shufflePinKeypad = shufflePin,
                 onToggleShufflePinKeypad = repo::setShufflePinKeypad,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ImportRoute(appViewModel: AppViewModel, db: TidesDatabase, nav: NavHostController) {
+    val vm: ImportViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+    val status by vm.status.collectAsStateWithLifecycle()
+    SubScreenScaffold("Import from another app", nav) { p ->
+        androidx.compose.foundation.layout.Box(modifier = Modifier.padding(p)) {
+            ImportScreen(
+                vm = vm,
+                onPick = { uri -> vm.pickedFile(uri, db) },
+            )
+        }
+    }
+    LaunchedEffect(status) {
+        if (status is ImportViewModel.Status.PreviewReady) {
+            nav.navigate(Routes.ImportPreview)
+        }
+    }
+}
+
+@Composable
+private fun ImportPreviewRoute(db: TidesDatabase, nav: NavHostController) {
+    val parentEntry = remember(nav.currentBackStackEntry) {
+        runCatching { nav.getBackStackEntry(Routes.Import) }.getOrNull()
+    }
+    if (parentEntry == null) {
+        LaunchedEffect(Unit) { nav.popBackStack() }
+        return
+    }
+    val vm: ImportViewModel = androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = parentEntry)
+    val status by vm.status.collectAsStateWithLifecycle()
+    val preview = (status as? ImportViewModel.Status.PreviewReady)?.preview
+        ?: (status as? ImportViewModel.Status.Committing)?.preview
+    if (preview == null) {
+        LaunchedEffect(Unit) { nav.popBackStack() }
+        return
+    }
+    SubScreenScaffold("Import preview", nav) { p ->
+        androidx.compose.foundation.layout.Box(modifier = Modifier.padding(p)) {
+            ImportPreviewScreen(
+                preview = preview,
+                onCancel = {
+                    vm.reset()
+                    nav.popBackStack(Routes.Import, inclusive = false)
+                },
+                onConfirm = {
+                    vm.confirmImport(db) {
+                        nav.navigate(Routes.ImportResult)
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ImportResultRoute(appViewModel: AppViewModel, nav: NavHostController) {
+    // The ImportViewModel was scoped to the Routes.Import back stack entry.
+    // That entry is still alive (we didn't pop it on confirm), so we can
+    // retrieve the same VM instance here.
+    val parentEntry = remember(nav.currentBackStackEntry) {
+        runCatching { nav.getBackStackEntry(Routes.Import) }.getOrNull()
+    }
+    if (parentEntry == null) {
+        LaunchedEffect(Unit) { nav.popBackStack() }
+        return
+    }
+    val vm: ImportViewModel = androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = parentEntry)
+    val status by vm.status.collectAsStateWithLifecycle()
+    val result = (status as? ImportViewModel.Status.Complete)?.result
+    if (result == null) {
+        LaunchedEffect(Unit) { nav.popBackStack() }
+        return
+    }
+
+    // Resolve onboarding VM now (in composable context) so we can call it
+    // from the non-composable onDone lambda below.
+    val onboardingEntry = remember {
+        runCatching { nav.getBackStackEntry(Routes.Onboarding) }.getOrNull()
+    }
+    val onboardingVm: com.hayate0726.tides.ui.onboarding.OnboardingViewModel? =
+        if (onboardingEntry != null) {
+            androidx.hilt.navigation.compose.hiltViewModel(viewModelStoreOwner = onboardingEntry)
+        } else null
+
+    SubScreenScaffold("Import complete", nav) { p ->
+        androidx.compose.foundation.layout.Box(modifier = Modifier.padding(p)) {
+            ImportResultScreen(
+                result = result,
+                onDone = {
+                    if (onboardingVm != null) {
+                        onboardingVm.markImported()
+                        nav.navigate(Routes.PinSetup) {
+                            popUpTo(Routes.Welcome) { inclusive = false }
+                        }
+                    } else {
+                        appViewModel.refreshPreImportSnapshotState()
+                        nav.popBackStack(Routes.Settings, inclusive = false)
+                    }
+                    vm.reset()
+                },
             )
         }
     }
