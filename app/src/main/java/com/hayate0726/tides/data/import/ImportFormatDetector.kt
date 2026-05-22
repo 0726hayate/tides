@@ -11,7 +11,11 @@ object ImportFormatDetector {
     }
 
     private val PDF_MAGIC = byteArrayOf(0x25, 0x50, 0x44, 0x46)
-    private const val SNIFF_BYTES = 4096
+    // Samsung Health HTML exports start with ~4 KB of inline CSS and a base64-
+    // encoded logo image before the "Samsung Health" marker text appears.
+    // 16 KB is a safe sniff window for real exports while still bounded enough
+    // to not waste I/O on huge files.
+    private const val SNIFF_BYTES = 16384
 
     fun detect(bytes: ByteArray): Format {
         if (bytes.isEmpty()) return Format.UNKNOWN

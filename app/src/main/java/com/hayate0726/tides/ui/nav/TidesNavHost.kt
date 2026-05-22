@@ -158,9 +158,15 @@ private fun RootImportPreviewRoute(appViewModel: AppViewModel, nav: NavHostContr
         return
     }
     val vm: ImportViewModel = hiltViewModel(viewModelStoreOwner = parentEntry)
-    val status by vm.status.collectAsStateWithLifecycle()
-    val preview = (status as? ImportViewModel.Status.PreviewReady)?.preview
-        ?: (status as? ImportViewModel.Status.Committing)?.preview
+    // Capture the preview once on first composition. We must NOT keep reading
+    // vm.status on every recomposition — when confirmImport sets status to
+    // Complete and navigates to ImportResult, a status-driven null check here
+    // would race and pop ImportPreview off the back stack, stranding the user.
+    val preview = remember(parentEntry) {
+        val s = vm.status.value
+        (s as? ImportViewModel.Status.PreviewReady)?.preview
+            ?: (s as? ImportViewModel.Status.Committing)?.preview
+    }
     if (preview == null) {
         LaunchedEffect(Unit) { nav.popBackStack() }
         return

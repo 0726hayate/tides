@@ -65,7 +65,7 @@ class ImportViewModel @Inject constructor(
 
                 val format = ctx.contentResolver.openInputStream(uri).use { stream ->
                     if (stream == null) return@use ImportFormatDetector.Format.UNKNOWN
-                    val head = ByteArray(4096)
+                    val head = ByteArray(16384)
                     val n = stream.read(head)
                     ImportFormatDetector.detect(head.copyOf(n.coerceAtLeast(0)))
                 }
@@ -134,7 +134,7 @@ class ImportViewModel @Inject constructor(
                 }
                 val format = ctx.contentResolver.openInputStream(uri).use { stream ->
                     if (stream == null) return@use ImportFormatDetector.Format.UNKNOWN
-                    val head = ByteArray(4096)
+                    val head = ByteArray(16384)
                     val n = stream.read(head)
                     ImportFormatDetector.detect(head.copyOf(n.coerceAtLeast(0)))
                 }
