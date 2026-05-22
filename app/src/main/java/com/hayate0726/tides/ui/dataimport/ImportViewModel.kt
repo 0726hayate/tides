@@ -119,6 +119,84 @@ class ImportViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Onboarding-path parser: no DB exists yet, so we parse the file but
+     * compute a preview with zero conflicts (the upcoming DB will be empty).
+     */
+    fun pickedFileForOnboarding(uri: Uri) {
+        _status.value = Status.Parsing
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val size = ctx.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
+                if (size > MAX_FILE_BYTES) {
+                    _status.value = Status.Error("File is unusually large. Make sure it's a period export, not a full data dump.")
+                    return@launch
+                }
+                val format = ctx.contentResolver.openInputStream(uri).use { stream ->
+                    if (stream == null) return@use ImportFormatDetector.Format.UNKNOWN
+                    val head = ByteArray(4096)
+                    val n = stream.read(head)
+                    ImportFormatDetector.detect(head.copyOf(n.coerceAtLeast(0)))
+                }
+                val source: ImportSource = when (format) {
+                    ImportFormatDetector.Format.SAMSUNG_HTML -> SamsungHealthHtmlImporter()
+                    ImportFormatDetector.Format.CLUE_CSV -> ClueImporter()
+                    ImportFormatDetector.Format.DRIP_JSON -> DripImporter()
+                    ImportFormatDetector.Format.PDF -> {
+                        _status.value = Status.Error("PDF isn't supported. Re-export and choose HTML, CSV, or JSON.")
+                        return@launch
+                    }
+                    ImportFormatDetector.Format.UNKNOWN -> {
+                        _status.value = Status.Error("Couldn't recognize this file. Make sure it's from Samsung Health, Clue, or drip.")
+                        return@launch
+                    }
+                }
+                val parse = ctx.contentResolver.openInputStream(uri).use { stream ->
+                    if (stream == null) {
+                        _status.value = Status.Error("Couldn't read the file.")
+                        return@launch
+                    }
+                    source.parse(stream)
+                }
+                pendingParse = parse
+                _status.value = Status.PreviewReady(
+                    PreviewState(
+                        sourceName = source.displayName,
+                        totalEntries = parse.entries.size,
+                        newDates = parse.entries.map { it.date }.distinct().size,
+                        conflictingDates = 0,
+                        unmapped = parse.unmapped,
+                        warnings = parse.warnings,
+                    )
+                )
+            } catch (e: Exception) {
+                _status.value = Status.Error(friendlyMessage(e))
+            }
+        }
+    }
+
+    /**
+     * Onboarding-path commit: stage the pending parse on OnboardingViewModel
+     * instead of writing to the (non-existent) DB. Apply happens in
+     * [com.hayate0726.tides.ui.onboarding.OnboardingViewModel.complete] after
+     * the DB is created.
+     */
+    fun confirmImportForOnboarding(
+        onboardingVm: com.hayate0726.tides.ui.onboarding.OnboardingViewModel,
+        onComplete: () -> Unit,
+    ) {
+        val parse = pendingParse ?: return
+        val preview = (_status.value as? Status.PreviewReady)?.preview ?: return
+        _status.value = Status.Committing(preview)
+        viewModelScope.launch(Dispatchers.Main) {
+            onboardingVm.stageImport(parse)
+            _status.value = Status.Complete(
+                ImportResult(addedDates = parse.entries.size, skippedDates = 0)
+            )
+            onComplete()
+        }
+    }
+
     fun reset() {
         pendingParse = null
         _status.value = Status.Idle

@@ -88,6 +88,19 @@ class OnboardingViewModel @Inject constructor(
 
     fun markImported() { _wasImported.value = true }
 
+    private var pendingImport: com.hayate0726.tides.data.`import`.ParseResult? = null
+
+    /**
+     * Stage a parsed import for application during [complete]. Used when the
+     * user imports during onboarding — the live DB doesn't exist yet, so we
+     * hold the parse result here and write it after the DB is created.
+     */
+    fun stageImport(parseResult: com.hayate0726.tides.data.`import`.ParseResult) {
+        pendingImport = parseResult
+        _wasImported.value = true
+        _currentStep.value = OnboardingStep.PIN
+    }
+
     private val _completion = MutableStateFlow<TidesDatabase?>(null)
     val completion: StateFlow<TidesDatabase?> = _completion.asStateFlow()
 
@@ -236,6 +249,17 @@ class OnboardingViewModel @Inject constructor(
                     )
                 }
             }
+            // Apply any staged onboarding import (best-effort; a failure here
+            // shouldn't break onboarding — the user can re-import via Settings).
+            pendingImport?.let { staged ->
+                try {
+                    com.hayate0726.tides.data.`import`.ImportPipeline().commit(staged, db)
+                } catch (_: Exception) {
+                    // Swallow; the user retains the option to re-import later.
+                }
+                pendingImport = null
+            }
+
             _completion.value = db
             draftStore.clear()
         }

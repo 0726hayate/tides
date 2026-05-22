@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import com.hayate0726.tides.AppState
 import com.hayate0726.tides.AppViewModel
 
@@ -13,12 +14,15 @@ import com.hayate0726.tides.AppViewModel
  * bottom navigation bar and the Settings sub-routes (Notifications, Backup,
  * Duress, ThreatPreset, Feedback).
  *
+ * [rootNav] is the root NavHostController (from TidesNavHost) and is used to
+ * navigate to root-level routes such as the Import flow.
+ *
  * If AppState drops out of unlocked (the moment after lock() but before the
  * NavHost routes us elsewhere), we just render nothing — the parent's
  * LaunchedEffect on targetRoute will swap us out shortly.
  */
 @Composable
-fun MainHost(appViewModel: AppViewModel) {
+fun MainHost(appViewModel: AppViewModel, rootNav: NavHostController) {
     val state by appViewModel.state.collectAsStateWithLifecycle()
     val db = when (val s = state) {
         is AppState.Unlocked -> s.db
@@ -27,6 +31,6 @@ fun MainHost(appViewModel: AppViewModel) {
     } ?: return
 
     CompositionLocalProvider(LocalTidesDatabase provides db) {
-        MainScaffold(appViewModel = appViewModel, db = db)
+        MainScaffold(appViewModel = appViewModel, db = db, rootNav = rootNav)
     }
 }
