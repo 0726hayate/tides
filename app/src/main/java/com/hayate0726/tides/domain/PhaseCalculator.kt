@@ -162,6 +162,21 @@ object PhaseCalculator {
             val ovEnd = cycleStart.plusDays(
                 (ovulationDayOfCycle + OVULATION_WINDOW_HALF_WIDTH - 1).toLong(),
             )
+            // Day after the period ends until the day before ovulation opens.
+            // Null if those don't form a forward-running range (clinically
+            // shouldn't with a 21..35-day cycle, but stay defensive).
+            val follicularStart = periodLast.plusDays(1)
+            val follicularEnd = ovStart.minusDays(1)
+            val follicular = if (!follicularEnd.isBefore(follicularStart)) {
+                follicularStart..follicularEnd
+            } else null
+            // Day after ovulation ends until the day before the next cycle
+            // starts (cycleStart + medianLength).
+            val lutealStart = ovEnd.plusDays(1)
+            val lutealEnd = cycleStart.plusDays(medianLength.toLong()).minusDays(1)
+            val luteal = if (!lutealEnd.isBefore(lutealStart)) {
+                lutealStart..lutealEnd
+            } else null
             // Confidence degrades with each forward projection — by cycle 3
             // we're stacking three median-length estimates.
             val confidence = when (i) {
@@ -171,6 +186,8 @@ object PhaseCalculator {
             out += ProjectedCycle(
                 periodRange = cycleStart..periodLast,
                 ovulationRange = ovStart..ovEnd,
+                follicularRange = follicular,
+                lutealRange = luteal,
                 confidence = confidence,
             )
             cycleStart = cycleStart.plusDays(medianLength.toLong())
@@ -181,6 +198,8 @@ object PhaseCalculator {
     data class ProjectedCycle(
         val periodRange: ClosedRange<LocalDate>,
         val ovulationRange: ClosedRange<LocalDate>,
+        val follicularRange: ClosedRange<LocalDate>?,
+        val lutealRange: ClosedRange<LocalDate>?,
         val confidence: PredictionRange.Confidence,
     )
 

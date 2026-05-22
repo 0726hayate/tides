@@ -37,6 +37,10 @@ data class CalendarMonthState(
     val predictedPeriodRanges: List<ClosedRange<LocalDate>>,
     /** Predicted ovulation windows (current cycle + projected cycles). */
     val ovulationRanges: List<ClosedRange<LocalDate>>,
+    /** Predicted follicular ranges (after period, before ovulation). */
+    val follicularRanges: List<ClosedRange<LocalDate>> = emptyList(),
+    /** Predicted luteal ranges (after ovulation, before next period). */
+    val lutealRanges: List<ClosedRange<LocalDate>> = emptyList(),
     val symptomDays: Set<LocalDate>,
 )
 
@@ -56,11 +60,10 @@ fun CalendarMonth(
     val leadingBlanks = (firstDayOfWeek.value - DayOfWeek.MONDAY.value + 7) % 7
 
     val periodRing = MaterialTheme.colorScheme.secondary
-    val ovulationRing = if (isSystemInDarkTheme()) {
-        TidesColors.DarkOvulationAccent
-    } else {
-        TidesColors.LightOvulationAccent
-    }
+    val dark = isSystemInDarkTheme()
+    val ovulationRing = if (dark) TidesColors.DarkOvulationAccent else TidesColors.LightOvulationAccent
+    val follicularBar = if (dark) TidesColors.DarkFollicularAccent else TidesColors.LightFollicularAccent
+    val lutealBar = if (dark) TidesColors.DarkLutealAccent else TidesColors.LightLutealAccent
 
     Column(modifier = modifier) {
         Row(Modifier.fillMaxWidth()) {
@@ -94,16 +97,23 @@ fun CalendarMonth(
                             state.predictedPeriodRanges.containsDate(date)
                         val isOvulation = view in listOf(CalendarView.ALL, CalendarView.PHASES) &&
                             state.ovulationRanges.containsDate(date)
+                        val phasesVisible = view in listOf(CalendarView.ALL, CalendarView.PHASES)
+                        val isFollicular = phasesVisible && state.follicularRanges.containsDate(date)
+                        val isLuteal = phasesVisible && state.lutealRanges.containsDate(date)
                         DayCell(
                             date = date,
                             isToday = date == state.today,
                             isPeriod = isPeriod,
                             isPredictedPeriod = isPredictedPeriod,
                             isOvulation = isOvulation,
+                            isFollicular = isFollicular,
+                            isLuteal = isLuteal,
                             hasSymptom = view in listOf(CalendarView.ALL, CalendarView.SYMPTOMS) &&
                                 date in state.symptomDays,
                             periodRingColor = periodRing,
                             ovulationRingColor = ovulationRing,
+                            follicularBarColor = follicularBar,
+                            lutealBarColor = lutealBar,
                             modifier = Modifier.weight(1f).aspectRatio(1f).clickable { onDayClick(date) },
                         )
                         dayIndex++
@@ -121,17 +131,31 @@ private fun DayCell(
     isPeriod: Boolean,
     isPredictedPeriod: Boolean,
     isOvulation: Boolean,
+    isFollicular: Boolean,
+    isLuteal: Boolean,
     hasSymptom: Boolean,
     periodRingColor: Color,
     ovulationRingColor: Color,
+    follicularBarColor: Color,
+    lutealBarColor: Color,
     modifier: Modifier = Modifier,
 ) {
+    // Show the follicular/luteal bar only on days that don't already carry a
+    // period or ovulation marker — otherwise the cell stacks too many cues.
+    val phaseBarColor: Color? = when {
+        isPeriod || isPredictedPeriod || isOvulation -> null
+        isFollicular -> follicularBarColor
+        isLuteal -> lutealBarColor
+        else -> null
+    }
     Box(modifier = modifier.semantics(mergeDescendants = true) {
         val parts = buildList {
             add(date.format(java.time.format.DateTimeFormatter.ofPattern("MMMM d")))
             if (isPeriod) add("period day")
             if (isPredictedPeriod) add("predicted period")
             if (isOvulation) add("ovulation")
+            if (phaseBarColor != null && isFollicular) add("follicular")
+            if (phaseBarColor != null && isLuteal) add("luteal")
             if (hasSymptom) add("symptom logged")
         }
         contentDescription = parts.joinToString(", ")
@@ -182,6 +206,20 @@ private fun DayCell(
                 Box(modifier = Modifier
                     .size(4.dp)
                     .background(MaterialTheme.colorScheme.onSurfaceVariant, CircleShape))
+            }
+        }
+        if (phaseBarColor != null) {
+            // Thin colored bar pinned to the bottom of the cell — sits below
+            // the day number and the symptom dot.
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .padding(top = 31.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Box(modifier = Modifier
+                    .size(width = 14.dp, height = 2.dp)
+                    .background(phaseBarColor))
             }
         }
     }

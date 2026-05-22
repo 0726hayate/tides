@@ -27,6 +27,10 @@ object TidesColors {
     val LightAccentInk = Color(0xFF8A3A30)
     /** Used for predicted-ovulation dotted ring on the calendar. */
     val LightOvulationAccent = Color(0xFF5E6F8C)
+    /** Warm honey — follicular-phase bottom bar on the calendar. */
+    val LightFollicularAccent = Color(0xFFC49A4D)
+    /** Dusty plum — luteal-phase bottom bar on the calendar. */
+    val LightLutealAccent = Color(0xFF8C6E8C)
 
     // Dark theme
     val DarkBackground = Color(0xFF0A0A0A)
@@ -38,6 +42,10 @@ object TidesColors {
     val DarkAccentInk = Color(0xFFE57373)
     /** Used for predicted-ovulation dotted ring on the calendar. */
     val DarkOvulationAccent = Color(0xFF9CB1D9)
+    /** Warm honey — follicular-phase bottom bar on the calendar. */
+    val DarkFollicularAccent = Color(0xFFD4B175)
+    /** Dusty plum — luteal-phase bottom bar on the calendar. */
+    val DarkLutealAccent = Color(0xFFB89BB8)
 
     val LightScheme: ColorScheme = lightColorScheme(
         primary = LightInk,

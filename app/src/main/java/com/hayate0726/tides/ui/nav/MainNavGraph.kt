@@ -176,6 +176,8 @@ private fun CalendarRoute(db: TidesDatabase) {
             periodDays = periodDays,
             predictedPeriodRanges = ui.predictedPeriodRanges,
             ovulationRanges = ui.ovulationRanges,
+            follicularRanges = ui.follicularRanges,
+            lutealRanges = ui.lutealRanges,
             symptomDays = ui.symptomDays,
         ),
         view = ui.view,

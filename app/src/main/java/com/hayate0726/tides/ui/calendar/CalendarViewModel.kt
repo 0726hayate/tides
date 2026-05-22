@@ -43,6 +43,8 @@ class CalendarViewModel(
         val showOvulation: Boolean = false,
         val predictedPeriodRanges: List<ClosedRange<LocalDate>> = emptyList(),
         val ovulationRanges: List<ClosedRange<LocalDate>> = emptyList(),
+        val follicularRanges: List<ClosedRange<LocalDate>> = emptyList(),
+        val lutealRanges: List<ClosedRange<LocalDate>> = emptyList(),
     )
 
     init { refresh() }
@@ -82,12 +84,16 @@ class CalendarViewModel(
             )
             val predictedPeriodRanges = projections.map { it.periodRange }
             val ovulationRanges = if (show) projections.map { it.ovulationRange } else emptyList()
+            val follicularRanges = projections.mapNotNull { it.follicularRange }
+            val lutealRanges = projections.mapNotNull { it.lutealRange }
             _state.value = _state.value.copy(
                 cycles = cycles,
                 symptomDays = symptoms,
                 showOvulation = show,
                 predictedPeriodRanges = predictedPeriodRanges,
                 ovulationRanges = ovulationRanges,
+                follicularRanges = follicularRanges,
+                lutealRanges = lutealRanges,
             )
             widgetUpdater?.publish(cycles, showOvulation = show)
         }

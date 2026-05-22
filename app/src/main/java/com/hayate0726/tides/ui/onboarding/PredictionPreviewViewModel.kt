@@ -10,6 +10,8 @@ data class PredictionPreviewState(
     val enteredPeriod: ClosedRange<LocalDate>,
     val predictedNextPeriod: ClosedRange<LocalDate>,
     val fertileWindow: ClosedRange<LocalDate>?,
+    val follicularWindow: ClosedRange<LocalDate>?,
+    val lutealWindow: ClosedRange<LocalDate>?,
     val hormonalBcNote: Boolean,
 )
 
@@ -44,11 +46,22 @@ object PredictionPreviewViewModel {
             assumeCycleLength = ASSUMED_CYCLE_LENGTH,
         )
         val fertile = phase?.ovulationWindow?.let { it.start..it.end }
+        // Single-cycle projection so the preview screen can show all four
+        // phases just like the home calendar does.
+        val firstProjection = PhaseCalculator.project(
+            cycles = listOf(syntheticActive),
+            today = lastPeriodStart,
+            birthControl = birthControl,
+            cyclesAhead = 1,
+            assumeCycleLength = ASSUMED_CYCLE_LENGTH,
+        ).firstOrNull()
 
         return PredictionPreviewState(
             enteredPeriod = enteredPeriod,
             predictedNextPeriod = predictedNextPeriod,
             fertileWindow = fertile,
+            follicularWindow = firstProjection?.follicularRange,
+            lutealWindow = firstProjection?.lutealRange,
             hormonalBcNote = birthControl.isHormonal,
         )
     }
