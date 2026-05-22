@@ -51,22 +51,34 @@ class CalendarViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             userPrivacyRepository?.refresh(db)
             val month = _state.value.month
-            val from = month.atDay(1).minusMonths(1)
-            val to = month.atEndOfMonth().plusMonths(1)
-            val cycles = repo.detectCycles(from, to)
-            val symptoms = repo.symptomEntriesInRange(from, to).map { it.date }.toSet()
-            val show = userPrivacyRepository?.view?.value?.showOvulation == true
+            // Symptom dots only need the viewed month + 1-month buffer for
+            // calendar overflow rows.
+            val viewFrom = month.atDay(1).minusMonths(1)
+            val viewTo = month.atEndOfMonth().plusMonths(1)
+            // Cycle detection needs a wider window so forward-projected
+            // predictions remain visible after the user scrolls past the
+            // last logged period. Look back 12 months from the viewed month
+            // (or further back, if the viewed month itself is in the past).
             val today = _state.value.today
+            val earliest = minOf(viewFrom, today.minusMonths(12))
+            val cycles = repo.detectCycles(earliest, viewTo)
+            val symptoms = repo.symptomEntriesInRange(viewFrom, viewTo).map { it.date }.toSet()
+            val show = userPrivacyRepository?.view?.value?.showOvulation == true
             val bc = db.birthControlDao().activeOnce()?.method ?: BirthControlMethod.NONE
             // Project 3 cycles ahead. We trim the FIRST cycle's period range
             // to days that have NOT been logged — the user already sees solid
             // markers for logged period days, so the dotted overlay would just
             // be visual noise on top.
+            // assumeCycleLength = 28 keeps predictions visible for users
+            // with only one logged period (no completed cycles yet to derive
+            // a personal median from). project() prefers the personal median
+            // once at least one cycle has completed.
             val projections = PhaseCalculator.project(
                 cycles = cycles,
                 today = today,
                 birthControl = bc,
                 cyclesAhead = 3,
+                assumeCycleLength = 28,
             )
             val predictedPeriodRanges = projections.map { it.periodRange }
             val ovulationRanges = if (show) projections.map { it.ovulationRange } else emptyList()
