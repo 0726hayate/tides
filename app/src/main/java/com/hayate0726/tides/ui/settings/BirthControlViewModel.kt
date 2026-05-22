@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -43,7 +44,10 @@ class BirthControlViewModel(
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val active = db.birthControlDao().activeOnce()?.method ?: BirthControlMethod.NONE
-            _state.value = _state.value.let { cur ->
+            // _state.update is CAS-based, so a select() that lands on the Main
+            // thread between this coroutine reading _state.value and writing it
+            // back is honored — the block re-runs against the latest state.
+            _state.update { cur ->
                 if (cur.userTouched) cur.copy(current = active)
                 else cur.copy(current = active, selected = active)
             }
@@ -51,7 +55,7 @@ class BirthControlViewModel(
     }
 
     fun select(m: BirthControlMethod) {
-        _state.value = _state.value.copy(selected = m, saved = false, userTouched = true)
+        _state.update { it.copy(selected = m, saved = false, userTouched = true) }
     }
 
     fun save() {

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.3] — 2026-05-22
+
+### Fixed
+- Birth control selection genuinely sticks now. The v1.4.2 fix still had a thread-race: the database read and the radio tap each updated state from different threads without proper atomicity, so a tap that landed mid-read could still get overwritten on slower hardware. Updates now use the atomic CAS path.
+
 ## [1.4.2] — 2026-05-22
 
 ### Fixed
