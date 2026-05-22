@@ -56,7 +56,7 @@ fun PredictionPreviewScreen(
         )
         Spacer(Modifier.size(12.dp))
         CalendarLegend(
-            showOvulation = state.fertileWindow != null,
+            hormonalBc = state.hormonalBcNote,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.size(16.dp))

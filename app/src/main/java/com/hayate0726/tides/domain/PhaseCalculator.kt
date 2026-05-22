@@ -124,7 +124,12 @@ object PhaseCalculator {
         assumeCycleLength: Int? = null,
     ): List<ProjectedCycle> {
         if (cyclesAhead <= 0) return emptyList()
-        if (birthControl.isHormonal) return emptyList()
+        // Hormonal BC no longer suppresses period prediction outright — users
+        // still want to know when bleeding is likely (placebo week, etc.).
+        // Ovulation is still computed below but the UI layer suppresses it
+        // via UserPrivacyView.showOvulation. Follicular and luteal are nulled
+        // out below because those phases are not biologically meaningful on
+        // hormonal contraception.
         val active = cycles.firstOrNull { it.isActive } ?: return emptyList()
 
         val completedLengths = cycles.filter { !it.isActive }.mapNotNull { it.length }
@@ -162,21 +167,22 @@ object PhaseCalculator {
             val ovEnd = cycleStart.plusDays(
                 (ovulationDayOfCycle + OVULATION_WINDOW_HALF_WIDTH - 1).toLong(),
             )
-            // Day after the period ends until the day before ovulation opens.
+            // Follicular and luteal don't apply on hormonal BC (no ovulation
+            // → no follicular→luteal transition). Otherwise: day after the
+            // period ends until the day before ovulation opens; day after
+            // ovulation ends until the day before the next cycle starts.
             // Null if those don't form a forward-running range (clinically
             // shouldn't with a 21..35-day cycle, but stay defensive).
-            val follicularStart = periodLast.plusDays(1)
-            val follicularEnd = ovStart.minusDays(1)
-            val follicular = if (!follicularEnd.isBefore(follicularStart)) {
-                follicularStart..follicularEnd
-            } else null
-            // Day after ovulation ends until the day before the next cycle
-            // starts (cycleStart + medianLength).
-            val lutealStart = ovEnd.plusDays(1)
-            val lutealEnd = cycleStart.plusDays(medianLength.toLong()).minusDays(1)
-            val luteal = if (!lutealEnd.isBefore(lutealStart)) {
-                lutealStart..lutealEnd
-            } else null
+            val follicular = if (birthControl.isHormonal) null else {
+                val followStart = periodLast.plusDays(1)
+                val followEnd = ovStart.minusDays(1)
+                if (!followEnd.isBefore(followStart)) followStart..followEnd else null
+            }
+            val luteal = if (birthControl.isHormonal) null else {
+                val lutStart = ovEnd.plusDays(1)
+                val lutEnd = cycleStart.plusDays(medianLength.toLong()).minusDays(1)
+                if (!lutEnd.isBefore(lutStart)) lutStart..lutEnd else null
+            }
             // Confidence degrades with each forward projection — by cycle 3
             // we're stacking three median-length estimates.
             val confidence = when (i) {

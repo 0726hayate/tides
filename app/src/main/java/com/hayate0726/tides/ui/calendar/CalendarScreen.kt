@@ -51,10 +51,8 @@ fun CalendarScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.size(16.dp))
-        // showOvulation is implicit: if any ovulation range is being passed in,
-        // the user is allowed to see ovulation, so the legend mirrors that.
         CalendarLegend(
-            showOvulation = monthState.ovulationRanges.isNotEmpty(),
+            hormonalBc = monthState.hormonalBc,
             modifier = Modifier.fillMaxWidth(),
         )
     }

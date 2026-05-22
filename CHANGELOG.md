@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.5] — 2026-05-22
+
+### Changed
+- On hormonal birth control the calendar now still shows predicted period (placebo-week bleeds, breakthrough bleeds, etc.) instead of going completely blank. Ovulation, follicular, and luteal phases remain suppressed — those phases don't biologically apply on hormonal contraception. The legend hides those rows and a short caption explains why so the calendar doesn't look broken.
+
 ## [1.4.4] — 2026-05-22
 
 ### Added

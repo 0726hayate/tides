@@ -27,10 +27,15 @@ import com.hayate0726.tides.ui.theme.TidesColors
  * Compact legend for the calendar markers — placed directly under the
  * month grid so first-time users can decode the dotted rings and phase
  * bars without trial and error.
+ *
+ * When [hormonalBc] is true, the ovulation/follicular/luteal rows are
+ * hidden (PhaseCalculator nulls those phases for hormonal users) and a
+ * one-line caption explains the omission so users don't think the app
+ * is broken.
  */
 @Composable
 fun CalendarLegend(
-    showOvulation: Boolean,
+    hormonalBc: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val dark = isSystemInDarkTheme()
@@ -47,18 +52,6 @@ fun CalendarLegend(
         ) {
             LegendItem(swatch = { SolidDot(periodColor) }, label = "Period")
             LegendItem(swatch = { DottedRing(periodColor) }, label = "Predicted")
-            if (showOvulation) {
-                LegendItem(swatch = { DottedRing(ovulationColor) }, label = "Ovulation")
-            }
-        }
-        Spacer(Modifier.size(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            LegendItem(swatch = { PhaseBar(follicularColor) }, label = "Follicular")
-            LegendItem(swatch = { PhaseBar(lutealColor) }, label = "Luteal")
             LegendItem(
                 swatch = {
                     Box(
@@ -68,6 +61,26 @@ fun CalendarLegend(
                     )
                 },
                 label = "Symptom",
+            )
+        }
+        if (!hormonalBc) {
+            Spacer(Modifier.size(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                LegendItem(swatch = { DottedRing(ovulationColor) }, label = "Ovulation")
+                LegendItem(swatch = { PhaseBar(follicularColor) }, label = "Follicular")
+                LegendItem(swatch = { PhaseBar(lutealColor) }, label = "Luteal")
+            }
+        } else {
+            Spacer(Modifier.size(10.dp))
+            Text(
+                "Hormonal birth control suppresses ovulation, so the fertile " +
+                    "window and follicular / luteal phases aren't predicted.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

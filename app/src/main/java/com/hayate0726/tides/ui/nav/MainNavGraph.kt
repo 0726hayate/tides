@@ -179,6 +179,7 @@ private fun CalendarRoute(db: TidesDatabase) {
             follicularRanges = ui.follicularRanges,
             lutealRanges = ui.lutealRanges,
             symptomDays = ui.symptomDays,
+            hormonalBc = ui.hormonalBc,
         ),
         view = ui.view,
         onViewChange = vm::changeView,

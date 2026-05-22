@@ -42,6 +42,8 @@ data class CalendarMonthState(
     /** Predicted luteal ranges (after ovulation, before next period). */
     val lutealRanges: List<ClosedRange<LocalDate>> = emptyList(),
     val symptomDays: Set<LocalDate>,
+    /** True when the user's active birth control is hormonal — drives the legend caption. */
+    val hormonalBc: Boolean = false,
 )
 
 private fun List<ClosedRange<LocalDate>>.containsDate(d: LocalDate): Boolean =

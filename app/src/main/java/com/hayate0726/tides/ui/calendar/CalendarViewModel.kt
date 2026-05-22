@@ -45,6 +45,7 @@ class CalendarViewModel(
         val ovulationRanges: List<ClosedRange<LocalDate>> = emptyList(),
         val follicularRanges: List<ClosedRange<LocalDate>> = emptyList(),
         val lutealRanges: List<ClosedRange<LocalDate>> = emptyList(),
+        val hormonalBc: Boolean = false,
     )
 
     init { refresh() }
@@ -94,6 +95,7 @@ class CalendarViewModel(
                 ovulationRanges = ovulationRanges,
                 follicularRanges = follicularRanges,
                 lutealRanges = lutealRanges,
+                hormonalBc = bc.isHormonal,
             )
             widgetUpdater?.publish(cycles, showOvulation = show)
         }

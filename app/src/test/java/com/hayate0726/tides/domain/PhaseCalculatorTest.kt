@@ -247,7 +247,13 @@ class PhaseCalculatorTest {
     }
 
     @Test
-    fun `project returns empty on hormonal bc`() {
+    fun `project still returns period range on hormonal bc but nulls follicular and luteal`() {
+        // v1.4.5: hormonal BC no longer suppresses everything. We still want
+        // to predict period bleeding (placebo week, breakthrough bleeds, etc.)
+        // but follicular and luteal phases are not biologically meaningful on
+        // hormonal contraception, so they are null. Ovulation is still
+        // computed by project() but suppressed at the UI layer via
+        // UserPrivacyView.showOvulation.
         val cycles = listOf(
             cycle("2026-03-01", "2026-03-04", "2026-03-29"),
             cycle("2026-03-29", "2026-04-01", null),
@@ -258,7 +264,14 @@ class PhaseCalculatorTest {
             birthControl = BirthControlMethod.PILL,
             cyclesAhead = 3,
         )
-        assertEquals(0, projections.size)
+        assertEquals(3, projections.size)
+        // Period range is computed exactly as for non-hormonal BC.
+        assertEquals(LocalDate.parse("2026-03-29"), projections[0].periodRange.start)
+        // Anatomical phases are suppressed for hormonal users.
+        assertNull(projections[0].follicularRange)
+        assertNull(projections[0].lutealRange)
+        assertNull(projections[1].follicularRange)
+        assertNull(projections[1].lutealRange)
     }
 
     @Test
