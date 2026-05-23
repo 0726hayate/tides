@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.7] — 2026-05-22
+
+### Fixed
+- Long screens now scroll instead of clipping content off the bottom on smaller phones. Affects Goals, Privacy preset, Biometric setup, Birth control, Reminders, Appearance, Biometric unlock toggle, Feedback, Import, Import result, Import prompt, Flow & symptoms, and the onboarding prediction preview. The latter four keep their bottom CTAs pinned in place while the content above scrolls.
+- Calendar view toggle now adapts to narrow screens. When there isn't enough room for the four pill buttons ("All", "Period only", "Phases", "Symptoms") side-by-side, they collapse into a dropdown so the labels never get clipped.
+
 ## [1.4.6] — 2026-05-22
 
 ### Fixed

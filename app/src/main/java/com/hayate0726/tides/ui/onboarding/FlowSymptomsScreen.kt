@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -61,60 +63,65 @@ fun FlowSymptomsScreen(
     var selected by remember { mutableStateOf<Set<Symptom>>(emptySet()) }
 
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        Text("How was that period?", style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.size(8.dp))
-        Text(
-            "Helps your first predictions and chart.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.size(24.dp))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Text("How was that period?", style = MaterialTheme.typography.headlineLarge)
+            Spacer(Modifier.size(8.dp))
+            Text(
+                "Helps your first predictions and chart.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.size(24.dp))
 
-        Text("Flow", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.size(8.dp))
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            val flowOptions = listOf(FlowIntensity.LIGHT, FlowIntensity.MEDIUM, FlowIntensity.HEAVY)
-            flowOptions.forEachIndexed { idx, f ->
-                SegmentedButton(
-                    selected = flow == f,
-                    onClick = { flow = f },
-                    shape = SegmentedButtonDefaults.itemShape(idx, flowOptions.size),
+            Text("Flow", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.size(8.dp))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                val flowOptions = listOf(FlowIntensity.LIGHT, FlowIntensity.MEDIUM, FlowIntensity.HEAVY)
+                flowOptions.forEachIndexed { idx, f ->
+                    SegmentedButton(
+                        selected = flow == f,
+                        onClick = { flow = f },
+                        shape = SegmentedButtonDefaults.itemShape(idx, flowOptions.size),
+                    ) {
+                        Text(when (f) {
+                            FlowIntensity.LIGHT -> "Light"
+                            FlowIntensity.MEDIUM -> "Medium"
+                            FlowIntensity.HEAVY -> "Heavy"
+                            else -> f.name
+                        })
+                    }
+                }
+            }
+
+            Spacer(Modifier.size(24.dp))
+            Text("Anything else? (optional)", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.size(8.dp))
+
+            val rows = ONBOARDING_SYMPTOM_CHIPS.chunked(3)
+            for (rowChips in rows) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 ) {
-                    Text(when (f) {
-                        FlowIntensity.LIGHT -> "Light"
-                        FlowIntensity.MEDIUM -> "Medium"
-                        FlowIntensity.HEAVY -> "Heavy"
-                        else -> f.name
-                    })
+                    for (sym in rowChips) {
+                        FilterChip(
+                            selected = sym in selected,
+                            onClick = {
+                                selected = if (sym in selected) selected - sym else selected + sym
+                            },
+                            label = { Text(sym.label()) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    repeat(3 - rowChips.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
-
-        Spacer(Modifier.size(24.dp))
-        Text("Anything else? (optional)", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.size(8.dp))
-
-        val rows = ONBOARDING_SYMPTOM_CHIPS.chunked(3)
-        for (rowChips in rows) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            ) {
-                for (sym in rowChips) {
-                    FilterChip(
-                        selected = sym in selected,
-                        onClick = {
-                            selected = if (sym in selected) selected - sym else selected + sym
-                        },
-                        label = { Text(sym.label()) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                repeat(3 - rowChips.size) { Spacer(Modifier.weight(1f)) }
-            }
-        }
-
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.size(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OnboardingSecondaryButton(
                 text = "Skip the rest",

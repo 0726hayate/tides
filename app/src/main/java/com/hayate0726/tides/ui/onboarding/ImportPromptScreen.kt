@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,18 +19,22 @@ fun ImportPromptScreen(
     onStartFresh: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        Text("Bring your data over?", style = MaterialTheme.typography.headlineLarge)
-        Spacer(Modifier.size(8.dp))
-        Text(
-            "If you've been using another period tracker, you can import your history " +
-                "now — Samsung Health, Clue, or drip. Nothing gets uploaded; the file " +
-                "stays on your phone.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(Modifier.weight(1f))
-
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Text("Bring your data over?", style = MaterialTheme.typography.headlineLarge)
+            Spacer(Modifier.size(8.dp))
+            Text(
+                "If you've been using another period tracker, you can import your history " +
+                    "now — Samsung Health, Clue, or drip. Nothing gets uploaded; the file " +
+                    "stays on your phone.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.size(16.dp))
         OnboardingPrimaryButton(
             text = "Import from another app",
             onClick = onImport,
