@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] — 2026-05-22
+
+### Added
+- Three new reminders. All opt-in, all off by default.
+  - **PMS check-in** — 5 days before your predicted period, a quick prompt to log how you feel.
+  - **Fertile window opens** — the day before your fertile window is predicted to open. Automatically hidden on hormonal birth control (ovulation is suppressed, so the notification wouldn't be meaningful).
+  - **Cycle complete** — 2 days after your predicted period, a quick recap that links to Stats so you can see the cycle that just closed.
+
 ## [1.4.7] — 2026-05-22
 
 ### Fixed

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.hayate0726.tides.domain.CyclePredictor
+import com.hayate0726.tides.domain.model.BirthControlMethod
 import com.hayate0726.tides.domain.model.Cycle
 import com.hayate0726.tides.domain.model.ThreatPreset
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -43,11 +44,17 @@ class ReminderScheduler @Inject constructor(
         cycles: List<Cycle>,
         prefs: NotificationPreferences.Snapshot,
         preset: ThreatPreset,
+        birthControl: BirthControlMethod = BirthControlMethod.NONE,
         now: ZonedDateTime = ZonedDateTime.now(),
     ) {
         val alarmMgr = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val prediction = CyclePredictor.predictNextPeriod(cycles)
-        val plans = ReminderScheduleCalculator.plan(prediction, prefs, now)
+        val plans = ReminderScheduleCalculator.plan(
+            prediction = prediction,
+            prefs = prefs,
+            now = now,
+            isHormonalBc = birthControl.isHormonal,
+        )
 
         val title = preset.defaultNotificationTitle
         val visibility = if (preset.lockScreenPreviewVisible) {

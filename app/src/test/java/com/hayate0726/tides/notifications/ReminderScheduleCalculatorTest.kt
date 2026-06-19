@@ -97,10 +97,56 @@ class ReminderScheduleCalculatorTest {
         assertEquals(LocalDate.parse("2026-06-04"), dateOf(ReminderType.LATE_PERIOD))
     }
 
+    @Test
+    fun v1_5_types_fire_at_correct_offsets() {
+        val plans = ReminderScheduleCalculator.plan(
+            prediction = symmetricRange("2026-06-01", halfWidth = 2),
+            prefs = allSixOn(),
+            now = at("2026-05-01"),
+        )
+        val dateOf = plans.associate {
+            it.type to ZonedDateTime.ofInstant(
+                java.time.Instant.ofEpochMilli(it.triggerEpochMs),
+                zone,
+            ).toLocalDate()
+        }
+        // PMS_CHECKIN: 5 days before predicted start (Jun 1 - 5 = May 27).
+        assertEquals(LocalDate.parse("2026-05-27"), dateOf[ReminderType.PMS_CHECKIN])
+        // FERTILE_WINDOW_OPEN: 17 days before predicted start (Jun 1 - 17 = May 15).
+        assertEquals(LocalDate.parse("2026-05-15"), dateOf[ReminderType.FERTILE_WINDOW_OPEN])
+        // CYCLE_COMPLETE_SUMMARY: 2 days after predicted start (Jun 1 + 2 = Jun 3).
+        assertEquals(LocalDate.parse("2026-06-03"), dateOf[ReminderType.CYCLE_COMPLETE_SUMMARY])
+    }
+
+    @Test
+    fun fertile_window_open_is_suppressed_on_hormonal_bc() {
+        val plans = ReminderScheduleCalculator.plan(
+            prediction = symmetricRange("2026-06-01", halfWidth = 2),
+            prefs = allSixOn(),
+            now = at("2026-05-01"),
+            isHormonalBc = true,
+        )
+        val types = plans.map { it.type }.toSet()
+        // FERTILE_WINDOW_OPEN is hidden; everything else still scheduled.
+        assertEquals(false, types.contains(ReminderType.FERTILE_WINDOW_OPEN))
+        assertEquals(true, types.contains(ReminderType.PMS_CHECKIN))
+        assertEquals(true, types.contains(ReminderType.CYCLE_COMPLETE_SUMMARY))
+        assertEquals(true, types.contains(ReminderType.PERIOD_PREDICTED))
+    }
+
     private fun allOn() = NotificationPreferences.Snapshot(
         periodPredictedEnabled = true,
         periodStartEnabled = true,
         latePeriodEnabled = true,
+    )
+
+    private fun allSixOn() = NotificationPreferences.Snapshot(
+        periodPredictedEnabled = true,
+        periodStartEnabled = true,
+        latePeriodEnabled = true,
+        fertileWindowOpenEnabled = true,
+        pmsCheckinEnabled = true,
+        cycleCompleteSummaryEnabled = true,
     )
 
     private fun symmetricRange(center: String, halfWidth: Int): PredictionRange {

@@ -430,7 +430,10 @@ private fun NotificationsRoute(db: TidesDatabase, nav: NavHostController) {
             )
         },
     )
-    LaunchedEffect(Unit) { vm.refreshSystemPermission() }
+    LaunchedEffect(Unit) {
+        vm.refreshSystemPermission()
+        vm.refreshBirthControlState()
+    }
     val s by vm.state.collectAsStateWithLifecycle()
     SubScreenScaffold("Reminders", nav) { padding ->
         Box(modifier = Modifier.padding(padding)) {
@@ -438,10 +441,17 @@ private fun NotificationsRoute(db: TidesDatabase, nav: NavHostController) {
                 periodPredictedEnabled = s.periodPredictedEnabled,
                 periodStartEnabled = s.periodStartEnabled,
                 latePeriodEnabled = s.latePeriodEnabled,
+                fertileWindowOpenEnabled = s.fertileWindowOpenEnabled,
+                pmsCheckinEnabled = s.pmsCheckinEnabled,
+                cycleCompleteSummaryEnabled = s.cycleCompleteSummaryEnabled,
                 systemNotificationsEnabled = s.systemNotificationsEnabled,
+                hormonalBc = s.hormonalBc,
                 onTogglePredicted = vm::togglePredicted,
                 onToggleStart = vm::toggleStart,
                 onToggleLate = vm::toggleLate,
+                onToggleFertileWindowOpen = vm::toggleFertileWindowOpen,
+                onTogglePmsCheckin = vm::togglePmsCheckin,
+                onToggleCycleCompleteSummary = vm::toggleCycleCompleteSummary,
                 onOpenSystemSettings = {
                     val intent = android.content.Intent(
                         android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS,

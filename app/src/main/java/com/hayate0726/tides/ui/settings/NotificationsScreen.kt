@@ -24,10 +24,17 @@ fun NotificationsScreen(
     periodPredictedEnabled: Boolean,
     periodStartEnabled: Boolean,
     latePeriodEnabled: Boolean,
+    fertileWindowOpenEnabled: Boolean,
+    pmsCheckinEnabled: Boolean,
+    cycleCompleteSummaryEnabled: Boolean,
     systemNotificationsEnabled: Boolean,
+    hormonalBc: Boolean,
     onTogglePredicted: (Boolean) -> Unit,
     onToggleStart: (Boolean) -> Unit,
     onToggleLate: (Boolean) -> Unit,
+    onToggleFertileWindowOpen: (Boolean) -> Unit,
+    onTogglePmsCheckin: (Boolean) -> Unit,
+    onToggleCycleCompleteSummary: (Boolean) -> Unit,
     onOpenSystemSettings: () -> Unit,
 ) {
     Column(
@@ -85,6 +92,31 @@ fun NotificationsScreen(
             checked = latePeriodEnabled,
             enabled = systemNotificationsEnabled,
             onCheckedChange = onToggleLate,
+        )
+        ToggleRow(
+            label = "PMS check-in",
+            description = "5 days before your predicted period — a nudge to log how you feel.",
+            checked = pmsCheckinEnabled,
+            enabled = systemNotificationsEnabled,
+            onCheckedChange = onTogglePmsCheckin,
+        )
+        ToggleRow(
+            label = "Fertile window opens",
+            description = if (hormonalBc) {
+                "Unavailable on hormonal birth control (ovulation is suppressed)."
+            } else {
+                "The day before your fertile window is predicted to open."
+            },
+            checked = fertileWindowOpenEnabled && !hormonalBc,
+            enabled = systemNotificationsEnabled && !hormonalBc,
+            onCheckedChange = onToggleFertileWindowOpen,
+        )
+        ToggleRow(
+            label = "Cycle complete",
+            description = "2 days after your predicted period — a quick recap of the cycle that just closed.",
+            checked = cycleCompleteSummaryEnabled,
+            enabled = systemNotificationsEnabled,
+            onCheckedChange = onToggleCycleCompleteSummary,
         )
     }
 }

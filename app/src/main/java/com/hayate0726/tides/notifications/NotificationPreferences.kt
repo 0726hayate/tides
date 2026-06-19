@@ -26,9 +26,14 @@ class NotificationPreferences @Inject constructor(
         val periodPredictedEnabled: Boolean,
         val periodStartEnabled: Boolean,
         val latePeriodEnabled: Boolean,
+        val fertileWindowOpenEnabled: Boolean = false,
+        val pmsCheckinEnabled: Boolean = false,
+        val cycleCompleteSummaryEnabled: Boolean = false,
     ) {
         val anyEnabled: Boolean get() =
-            periodPredictedEnabled || periodStartEnabled || latePeriodEnabled
+            periodPredictedEnabled || periodStartEnabled || latePeriodEnabled ||
+                fertileWindowOpenEnabled || pmsCheckinEnabled ||
+                cycleCompleteSummaryEnabled
     }
 
     private val _state = MutableStateFlow(read())
@@ -48,10 +53,25 @@ class NotificationPreferences @Inject constructor(
         it.copy(latePeriodEnabled = enabled)
     }
 
+    fun setFertileWindowOpen(enabled: Boolean) = update(KEY_FERTILE, enabled) {
+        it.copy(fertileWindowOpenEnabled = enabled)
+    }
+
+    fun setPmsCheckin(enabled: Boolean) = update(KEY_PMS, enabled) {
+        it.copy(pmsCheckinEnabled = enabled)
+    }
+
+    fun setCycleCompleteSummary(enabled: Boolean) = update(KEY_CYCLE_DONE, enabled) {
+        it.copy(cycleCompleteSummaryEnabled = enabled)
+    }
+
     private fun read(): Snapshot = Snapshot(
         periodPredictedEnabled = sp.getBoolean(KEY_PREDICTED, false),
         periodStartEnabled = sp.getBoolean(KEY_START, false),
         latePeriodEnabled = sp.getBoolean(KEY_LATE, false),
+        fertileWindowOpenEnabled = sp.getBoolean(KEY_FERTILE, false),
+        pmsCheckinEnabled = sp.getBoolean(KEY_PMS, false),
+        cycleCompleteSummaryEnabled = sp.getBoolean(KEY_CYCLE_DONE, false),
     )
 
     private fun update(key: String, value: Boolean, transform: (Snapshot) -> Snapshot) {
@@ -64,5 +84,8 @@ class NotificationPreferences @Inject constructor(
         private const val KEY_PREDICTED = "period_predicted"
         private const val KEY_START = "period_start"
         private const val KEY_LATE = "late_period"
+        private const val KEY_FERTILE = "fertile_window_open"
+        private const val KEY_PMS = "pms_checkin"
+        private const val KEY_CYCLE_DONE = "cycle_complete_summary"
     }
 }

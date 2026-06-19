@@ -10,10 +10,21 @@ import java.time.ZonedDateTime
  * Pure-Kotlin computation of which reminders should fire and when, given a
  * prediction and the user's toggles. No Android deps; trivially unit-testable.
  *
- * Schedule decisions (spec §5.12):
- *  - PERIOD_PREDICTED  → fires 3 days before predicted start
- *  - PERIOD_START      → fires on predicted start day
- *  - LATE_PERIOD       → fires predicted-start + 3 days
+ * Schedule decisions:
+ *  - PERIOD_PREDICTED        → fires 3 days before predicted start (spec §5.12)
+ *  - PERIOD_START            → fires on predicted start day             (§5.12)
+ *  - LATE_PERIOD             → fires predicted-start + 3 days            (§5.12)
+ *  - PMS_CHECKIN             → fires 5 days before predicted start      (v1.5)
+ *  - FERTILE_WINDOW_OPEN     → fires 17 days before predicted start.    (v1.5)
+ *                              Derivation: ovulation ≈ next start − 14
+ *                              (PhaseCalculator's fixed-luteal model);
+ *                              fertile window opens ov − 2 = next − 16;
+ *                              we notify the day before, so next − 17.
+ *                              Suppressed when [isHormonalBc] is true —
+ *                              ovulation is anatomically absent.
+ *  - CYCLE_COMPLETE_SUMMARY  → fires predicted-start + 2. By then a new   (v1.5)
+ *                              period has likely been logged, so a generic
+ *                              "tap to see last cycle" body is honest.
  *
  * "Once per cycle" is enforced at the AlarmManager layer: scheduling the same
  * type a second time with the same requestCode replaces the prior alarm. The
@@ -35,6 +46,7 @@ object ReminderScheduleCalculator {
         prediction: PredictionRange?,
         prefs: NotificationPreferences.Snapshot,
         now: ZonedDateTime,
+        isHormonalBc: Boolean = false,
     ): List<Plan> {
         if (prediction == null) return emptyList()
         val zone: ZoneId = now.zone
@@ -58,6 +70,17 @@ object ReminderScheduleCalculator {
         maybeAdd(ReminderType.PERIOD_PREDICTED, center.minusDays(3), prefs.periodPredictedEnabled)
         maybeAdd(ReminderType.PERIOD_START, center, prefs.periodStartEnabled)
         maybeAdd(ReminderType.LATE_PERIOD, center.plusDays(3), prefs.latePeriodEnabled)
+        maybeAdd(ReminderType.PMS_CHECKIN, center.minusDays(5), prefs.pmsCheckinEnabled)
+        maybeAdd(
+            ReminderType.FERTILE_WINDOW_OPEN,
+            center.minusDays(17),
+            prefs.fertileWindowOpenEnabled && !isHormonalBc,
+        )
+        maybeAdd(
+            ReminderType.CYCLE_COMPLETE_SUMMARY,
+            center.plusDays(2),
+            prefs.cycleCompleteSummaryEnabled,
+        )
 
         return plans
     }

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hayate0726.tides.data.TidesDatabase
 import com.hayate0726.tides.domain.CycleDetector
+import com.hayate0726.tides.domain.model.BirthControlMethod
 import com.hayate0726.tides.domain.model.Cycle
 import com.hayate0726.tides.domain.model.ThreatPreset
 import com.hayate0726.tides.notifications.NotificationPreferences
@@ -38,7 +39,12 @@ class NotificationsViewModel(
         val periodPredictedEnabled: Boolean = false,
         val periodStartEnabled: Boolean = false,
         val latePeriodEnabled: Boolean = false,
+        val fertileWindowOpenEnabled: Boolean = false,
+        val pmsCheckinEnabled: Boolean = false,
+        val cycleCompleteSummaryEnabled: Boolean = false,
         val systemNotificationsEnabled: Boolean = true,
+        /** True when active BC is hormonal — the screen disables the fertile toggle. */
+        val hormonalBc: Boolean = false,
     )
 
     private val _state = MutableStateFlow(snapshot())
@@ -68,34 +74,70 @@ class NotificationsViewModel(
         rearm()
     }
 
+    fun toggleFertileWindowOpen(v: Boolean) {
+        prefs.setFertileWindowOpen(v)
+        _state.value = _state.value.copy(fertileWindowOpenEnabled = v)
+        rearm()
+    }
+
+    fun togglePmsCheckin(v: Boolean) {
+        prefs.setPmsCheckin(v)
+        _state.value = _state.value.copy(pmsCheckinEnabled = v)
+        rearm()
+    }
+
+    fun toggleCycleCompleteSummary(v: Boolean) {
+        prefs.setCycleCompleteSummary(v)
+        _state.value = _state.value.copy(cycleCompleteSummaryEnabled = v)
+        rearm()
+    }
+
     private fun snapshot(): UiState {
         val s = prefs.snapshot()
         return UiState(
             periodPredictedEnabled = s.periodPredictedEnabled,
             periodStartEnabled = s.periodStartEnabled,
             latePeriodEnabled = s.latePeriodEnabled,
+            fertileWindowOpenEnabled = s.fertileWindowOpenEnabled,
+            pmsCheckinEnabled = s.pmsCheckinEnabled,
+            cycleCompleteSummaryEnabled = s.cycleCompleteSummaryEnabled,
             systemNotificationsEnabled = NotificationManagerCompat.from(ctx).areNotificationsEnabled(),
+            // hormonalBc is filled in asynchronously by refreshBirthControlState();
+            // initial false is safe because the worst case is briefly enabling
+            // a toggle that the scheduler will then refuse to arm.
+            hormonalBc = false,
         )
+    }
+
+    /** Reads the active BC once on screen open to drive the fertile-toggle gate. */
+    fun refreshBirthControlState() {
+        viewModelScope.launch {
+            val bc: BirthControlMethod = withContext(Dispatchers.IO) {
+                db.birthControlDao().activeOnce()?.method ?: BirthControlMethod.NONE
+            }
+            _state.value = _state.value.copy(hormonalBc = bc.isHormonal)
+        }
     }
 
     private fun rearm() {
         viewModelScope.launch {
-            val cycles: List<Cycle> = withContext(Dispatchers.IO) {
+            val (cycles, activeBc) = withContext(Dispatchers.IO) {
                 val end = LocalDate.now()
                 val start = end.minusYears(2)
                 val entries = db.cycleEntryDao().rangeOnce(start, end)
-                val activeBc = db.birthControlDao().activeOnce()?.method
-                CycleDetector.detect(
+                val bc = db.birthControlDao().activeOnce()?.method ?: BirthControlMethod.NONE
+                val detected: List<Cycle> = CycleDetector.detect(
                     entries.map { CycleDetector.Entry(it.date, it.flowIntensity) },
-                    activeBirthControl = activeBc,
+                    activeBirthControl = bc,
                 )
+                detected to bc
             }
             val presetName = withContext(Dispatchers.IO) {
                 db.settingsDao().get("threat_preset")
             }
             val preset = runCatching { ThreatPreset.valueOf(presetName ?: "") }
                 .getOrDefault(ThreatPreset.DEFAULT)
-            scheduler.refresh(cycles, prefs.snapshot(), preset)
+            scheduler.refresh(cycles, prefs.snapshot(), preset, activeBc)
         }
     }
 }
